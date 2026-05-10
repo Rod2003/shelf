@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+
+# Build artifacts
+DerivedData/
+build/
+.build/
+Packages/
+Package.resolved
+
+# Sisyphus planning artifacts (local-only, not shipped)
+.sisyphus/
+
+# IDEs
+*.swiftpm/
+.swiftpm/
+
+# Misc
+*.log
+*.tmp

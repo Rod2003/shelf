@@ -1,0 +1,103 @@
+name: Shelf
+options:
+  bundleIdPrefix: dev.rod
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: NO
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+packages:
+  ShelfCore:
+    path: Modules/ShelfCore
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: "1.17.0"
+targets:
+  Shelf:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Shelf
+    info:
+      path: Shelf/Info.plist
+      properties:
+        CFBundleDisplayName: Shelf
+        CFBundleName: Shelf
+        CFBundleIdentifier: dev.rod.shelf
+        CFBundleExecutable: Shelf
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        CFBundlePackageType: APPL
+        CFBundleIconName: AppIcon
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleDevelopmentRegion: en
+        LSMinimumSystemVersion: "14.0"
+        LSUIElement: true
+        NSHumanReadableCopyright: "Copyright © 2026 Rod2003. MIT Licensed."
+        NSPrincipalClass: ShelfApplication
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.rod.shelf
+        PRODUCT_NAME: Shelf
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Shelf/Info.plist
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_NSPrincipalClass: ShelfApplication
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Rod2003. MIT Licensed."
+        INFOPLIST_KEY_LSMinimumSystemVersion: "14.0"
+        INFOPLIST_KEY_CFBundleDisplayName: Shelf
+        INFOPLIST_KEY_CFBundleIconName: AppIcon
+        SKIP_INSTALL: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        DEAD_CODE_STRIPPING: YES
+    dependencies:
+      - package: ShelfCore
+        product: ShelfCore
+  ShelfTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ShelfTests
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Shelf.app/Contents/MacOS/Shelf"
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    dependencies:
+      - target: Shelf
+      - package: SnapshotTesting
+        product: SnapshotTesting
+schemes:
+  Shelf:
+    build:
+      targets:
+        Shelf: all
+    run:
+      config: Debug
+      executable: Shelf
+    test:
+      config: Debug
+      targets:
+        - ShelfTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
