@@ -296,6 +296,42 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(store.all().count, 0)
     }
 
+    // MARK: - 10b. Update with no-op mutation does not fire onChange
+
+    func testUpdateWithNoOpMutationDoesNotFireOnChange() {
+        let env = makeIsolatedDefaults()
+        defer { cleanupDefaults(env.defaults, suiteName: env.suiteName) }
+
+        let prefix = "test"
+        let store = ShelfStore(backend: .userDefaults(env.defaults, keyPrefix: prefix))
+
+        let s1 = makeShelf(name: "a", createdAt: Date(timeIntervalSince1970: 1_700_000_001))
+        store.add(s1)
+
+        var observerFires = 0
+        store.onChange = { observerFires += 1 }
+
+        // Closure runs but leaves the shelf Equatable-equal to its
+        // pre-mutation value — neither a persist nor an observer fire
+        // should happen.
+        store.update(shelfID: s1.id) { _ in }
+        XCTAssertEqual(observerFires, 0,
+                       "Empty mutation closure must be treated as a no-op")
+
+        store.update(shelfID: s1.id) { shelf in
+            // Read but don't change anything.
+            _ = shelf.name
+        }
+        XCTAssertEqual(observerFires, 0,
+                       "Read-only mutation closure must be treated as a no-op")
+
+        // A real mutation must fire the observer exactly once.
+        store.update(shelfID: s1.id) { shelf in
+            shelf.name = "renamed"
+        }
+        XCTAssertEqual(observerFires, 1, "Real mutation fires observer once")
+    }
+
     // MARK: - 11. In-memory roundtrip is NOT persistent across instances
 
     func testInMemoryRoundTripIsNotPersisted() {

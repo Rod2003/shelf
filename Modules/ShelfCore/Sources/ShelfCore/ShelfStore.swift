@@ -37,7 +37,12 @@ import Foundation
 /// (`add`, `remove`, `move`, `update` when something actually changes).
 /// Higher layers wrap this for richer observation; ShelfCore deliberately
 /// does NOT use Combine / `ObservableObject` (per Metis directive).
-public final class ShelfStore {
+public final class ShelfStore: @unchecked Sendable {
+    // `@unchecked Sendable`: all mutable state is guarded by the `NSLock`
+    // below, so the compiler's stricter Sendable check is replaced with a
+    // hand-maintained invariant — every public method takes the lock
+    // before touching `shelves` / `order`, and `onChange` is invoked only
+    // after the lock has been released.
 
     /// Maximum number of shelves retained at once. Hardcoded per Metis
     /// directive — NOT user-configurable.
@@ -138,14 +143,22 @@ public final class ShelfStore {
     }
 
     /// Mutate an existing shelf in place. No-op (and `onChange` does NOT
-    /// fire) if `shelfID` is not present.
+    /// fire) if `shelfID` is not present, or if `mutate` leaves the shelf
+    /// `Equatable`-equal to its pre-mutation value — that suppresses
+    /// redundant disk writes and observer notifications when the caller's
+    /// closure ends up being a logical no-op.
     public func update(shelfID: ShelfID, mutate: (inout Shelf) -> Void) {
         lock.lock()
-        guard var shelf = shelves[shelfID] else {
+        guard let original = shelves[shelfID] else {
             lock.unlock()
             return
         }
+        var shelf = original
         mutate(&shelf)
+        guard shelf != original else {
+            lock.unlock()
+            return
+        }
         shelves[shelfID] = shelf
         persistShelf(shelf)
         lock.unlock()
