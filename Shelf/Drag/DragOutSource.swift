@@ -112,8 +112,11 @@ public final class DragOutSource: NSObject, NSDraggingSource {
     /// writes for clipboard images).
     private func uti(for item: ShelfItem) -> String? {
         switch item.kind {
-        case .fileBookmark(let record):
-            let ext = (record.originalPath as NSString).pathExtension
+        case .fileBookmark:
+            // Extension is read from `item.displayName` (e.g. "scan.pdf")
+            // because `BookmarkRecord.originalPath` is a diagnostic-only
+            // field that does not survive a persistence round-trip.
+            let ext = (item.displayName as NSString).pathExtension
             if ext.isEmpty { return UTType.data.identifier }
             return UTType(filenameExtension: ext)?.identifier ?? UTType.data.identifier
         case .clipboardImage:

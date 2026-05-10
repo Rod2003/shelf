@@ -349,7 +349,12 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
     private func makePasteboardWriter() -> NSPasteboardWriting {
         switch item.kind {
         case .fileBookmark(let record):
-            let typeIdentifier = Self.utiForFile(originalPath: record.originalPath)
+            // UTI is derived from the item's display name (a filename like
+            // "scan.pdf" set at drag-in from `url.lastPathComponent`) rather
+            // than `record.originalPath` — `originalPath` is now a
+            // diagnostic-only field that round-trips empty after a
+            // persistence cycle, so it cannot be load-bearing here.
+            let typeIdentifier = Self.utiForFile(displayName: item.displayName)
             // Resolve the bookmark NOW so we can put the real file URL
             // on the pasteboard alongside the file promise. Browsers,
             // chat apps, and web upload zones read `.fileURL` directly
@@ -438,8 +443,8 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         }
     }
 
-    nonisolated private static func utiForFile(originalPath: String) -> String {
-        let ext = (originalPath as NSString).pathExtension
+    nonisolated private static func utiForFile(displayName: String) -> String {
+        let ext = (displayName as NSString).pathExtension
         if ext.isEmpty { return UTType.data.identifier }
         return UTType(filenameExtension: ext)?.identifier ?? UTType.data.identifier
     }

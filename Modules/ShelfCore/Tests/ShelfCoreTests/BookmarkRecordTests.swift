@@ -11,8 +11,10 @@ final class BookmarkRecordTests: XCTestCase {
         XCTAssertLessThanOrEqual(record.createdAt.timeIntervalSinceNow, 1.0)
     }
 
-    func testCodableRoundTripPreservesData() throws {
-        // Generate ~1 KB of pseudo-random bytes.
+    /// `bookmarkData` and `createdAt` must round-trip byte-equal; the
+    /// diagnostic `originalPath` field is deliberately redacted on encode
+    /// for privacy (see BookmarkRecord docstring).
+    func testCodableRoundTripPreservesLoadBearingFields() throws {
         var bytes = [UInt8](repeating: 0, count: 1024)
         for i in 0..<bytes.count {
             bytes[i] = UInt8.random(in: 0...255)
@@ -28,31 +30,52 @@ final class BookmarkRecordTests: XCTestCase {
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(BookmarkRecord.self, from: encoded)
         XCTAssertEqual(decoded.bookmarkData, payload, "Bookmark Data must round-trip byte-equal")
-        XCTAssertEqual(decoded.originalPath, path)
         XCTAssertEqual(decoded.createdAt.timeIntervalSince1970,
                        createdAt.timeIntervalSince1970,
                        accuracy: 0.001)
-        XCTAssertEqual(decoded, original)
+        XCTAssertEqual(decoded.originalPath, "",
+                       "originalPath must NOT survive a Codable round-trip — see privacy note")
+        XCTAssertEqual(decoded, original,
+                       "Equatable ignores originalPath, so the records must compare equal")
     }
 
-    func testEqualityRequiresAllFieldsMatch() {
+    /// The encoded payload must not contain `originalPath` as a key OR the
+    /// path's directory components as a value. This is the privacy guarantee
+    /// the docstring promises.
+    func testEncodedPayloadDoesNotLeakPath() throws {
+        let secretPath = "/Users/foo/Documents/SECRET-MARKER-1234/scan.pdf"
+        let record = BookmarkRecord(
+            bookmarkData: Data([0x01, 0x02, 0x03]),
+            originalPath: secretPath
+        )
+        let encoded = try JSONEncoder().encode(record)
+        guard let jsonString = String(data: encoded, encoding: .utf8) else {
+            return XCTFail("Encoded record was not valid UTF-8")
+        }
+        XCTAssertFalse(jsonString.contains("originalPath"),
+                       "Encoded JSON must not contain the originalPath key")
+        XCTAssertFalse(jsonString.contains("SECRET-MARKER-1234"),
+                       "Encoded JSON must not contain user directory components")
+    }
+
+    func testEqualityIgnoresOriginalPath() {
         let baseDate = Date(timeIntervalSince1970: 1_700_000_000)
         let baseData = Data([0x01, 0x02, 0x03])
-        let basePath = "/tmp/a"
 
-        let a = BookmarkRecord(bookmarkData: baseData, originalPath: basePath, createdAt: baseDate)
-        let same = BookmarkRecord(bookmarkData: baseData, originalPath: basePath, createdAt: baseDate)
+        let a = BookmarkRecord(bookmarkData: baseData, originalPath: "/tmp/a", createdAt: baseDate)
+        let same = BookmarkRecord(bookmarkData: baseData, originalPath: "/tmp/a", createdAt: baseDate)
         XCTAssertEqual(a, same)
 
-        let differentData = BookmarkRecord(bookmarkData: Data([0x99]), originalPath: basePath, createdAt: baseDate)
+        let differentData = BookmarkRecord(bookmarkData: Data([0x99]), originalPath: "/tmp/a", createdAt: baseDate)
         XCTAssertNotEqual(a, differentData, "Different bookmarkData breaks equality")
 
         let differentPath = BookmarkRecord(bookmarkData: baseData, originalPath: "/tmp/b", createdAt: baseDate)
-        XCTAssertNotEqual(a, differentPath, "Different originalPath breaks equality")
+        XCTAssertEqual(a, differentPath,
+                       "originalPath is a diagnostic-only field and MUST NOT affect equality")
 
         let differentDate = BookmarkRecord(
             bookmarkData: baseData,
-            originalPath: basePath,
+            originalPath: "/tmp/a",
             createdAt: baseDate.addingTimeInterval(1)
         )
         XCTAssertNotEqual(a, differentDate, "Different createdAt breaks equality")
