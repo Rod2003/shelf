@@ -79,6 +79,7 @@
 		52830C11D37CBBA9C1A8847E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		5814AE88C0EBB07C4337E75B /* testEmptyShelfDark.empty.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = testEmptyShelfDark.empty.png; sourceTree = "<group>"; };
 		6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewFactory.swift; sourceTree = "<group>"; };
+		774F726E1E1B25D732E2C7FD /* Shelf.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shelf.entitlements; sourceTree = "<group>"; };
 		77B5B8D12EBC926332892831 /* DragOutCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOutCell.swift; sourceTree = "<group>"; };
 		7FA0B86B38737F43CC8B922B /* testNamedShelfHeaderDark.named-shelf.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testNamedShelfHeaderDark.named-shelf.png"; sourceTree = "<group>"; };
 		83B1CFC6CC772B8F8500F142 /* ThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailService.swift; sourceTree = "<group>"; };
@@ -210,6 +211,7 @@
 				A7BA7449A7ED3543AAD7A801 /* Info.plist */,
 				52830C11D37CBBA9C1A8847E /* main.swift */,
 				9AC8A686F7D6912CA8488F09 /* MenuBarController.swift */,
+				774F726E1E1B25D732E2C7FD /* Shelf.entitlements */,
 				05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */,
 				D79268238FFB4BA57899F436 /* Detect */,
 				0EEBFC7600589AF0B44B7AA3 /* Drag */,
@@ -612,6 +614,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Shelf/Shelf.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -657,6 +660,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Shelf/Shelf.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;

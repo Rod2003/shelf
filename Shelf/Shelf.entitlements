@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Intentionally empty. The app does not (yet) opt into the App Sandbox.
+	  This file exists so the Hardened Runtime build setting has an
+	  explicit entitlements plist to sign against once `codesign --options
+	  runtime` is enabled for distribution. Future additions go here:
+
+	    com.apple.security.app-sandbox        — when sandbox migration lands
+	    com.apple.security.files.user-selected.read-write
+	                                          — paired with sandbox, for
+	                                            user-dropped files
+	    com.apple.security.application-groups — group.dev.rod.shelf, for
+	                                            future widget extension
+
+	  Do NOT add network or automation entitlements without a documented
+	  feature need; Shelf v1 has no network surface.
+	-->
+</dict>
+</plist>
