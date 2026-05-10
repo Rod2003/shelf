@@ -91,14 +91,20 @@ public struct ShakeHeuristic {
     public mutating func ingest(timestamp: TimeInterval, position: CGPoint) -> Event {
         window.append(Sample(timestamp: timestamp, x: Double(position.x)))
 
-        // Trim samples that fall outside the sliding window.
+        // Trim samples that fall outside the sliding window. `first` is
+        // re-read each iteration via guard-let so this loop never relies
+        // on a force unwrap — a regression in the outer count guard
+        // would otherwise crash on every cursor move.
         while window.count > 1,
-              timestamp - window.first!.timestamp > config.timeWindowSec {
+              let oldest = window.first,
+              timestamp - oldest.timestamp > config.timeWindowSec {
             window.removeFirst()
         }
 
         // Need at least two samples to compute any delta.
-        guard window.count >= 2 else { return .none }
+        guard let first = window.first,
+              let last = window.last,
+              window.count >= 2 else { return .none }
 
         // Walk the window counting sign reversals among "qualifying" legs
         // (ones whose |Δx| >= minDeltaPx). Sub-threshold deltas are ignored
@@ -115,7 +121,7 @@ public struct ShakeHeuristic {
             lastSign = sign
         }
 
-        let duration = window.last!.timestamp - window.first!.timestamp
+        let duration = last.timestamp - first.timestamp
         if reversals >= config.minReversals,
            duration >= config.minDurationSec {
             // Auto-reset so the same wave of motion cannot re-emit on the
