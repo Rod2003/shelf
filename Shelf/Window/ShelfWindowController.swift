@@ -20,25 +20,25 @@ public protocol ShelfWindowControllerDelegate: AnyObject {
 /// The panel is configured per the canonical Spike B configuration:
 /// `.nonactivatingPanel + .titled + .resizable + .closable` style mask,
 /// floating window level, full-screen-auxiliary + can-join-all-spaces collection
-/// behavior. Combined with `NSApp.setActivationPolicy(.accessory)` (set in
-/// AppDelegate per T8), this delivers a panel that floats above everything
-/// without activating Shelf.
+/// behavior. Combined with `NSApp.setActivationPolicy(.accessory)` set in
+/// AppDelegate, this delivers a panel that floats above everything without
+/// activating Shelf.
 ///
-/// **Post-MVP fix**: `becomesKeyOnlyIfNeeded` is set to `false` so that any
-/// click on the panel transitions it to the key state. With `true` (the prior
-/// value), AppKit only made the panel key when a subview *needed* key input
-/// (e.g. a TextField); SwiftUI tap gestures don't propagate that "need" upward,
-/// so the panel never became key, `windowDidBecomeKey` never fired, and the
-/// AppCoordinator's `setSpaceEnabled(true)` / `setEscEnabled(true)` gating
-/// never armed — Space (Quick Look) and Esc (close) were silently dead. Pairing
+/// `becomesKeyOnlyIfNeeded` is set to `false` so that any click on the panel
+/// transitions it to the key state. With `true`, AppKit only made the panel
+/// key when a subview *needed* key input (e.g. a TextField); SwiftUI tap
+/// gestures don't propagate that "need" upward, so the panel never became
+/// key, `windowDidBecomeKey` never fired, and the AppCoordinator's
+/// `setSpaceEnabled(true)` / `setEscEnabled(true)` gating never armed —
+/// Space (Quick Look) and Esc (close) were silently dead. Pairing
 /// `becomesKeyOnlyIfNeeded = false` with `.nonactivatingPanel` keeps focus
 /// cooperative: the panel becomes key without activating the app, so Safari
 /// (or whichever was frontmost) stays frontmost while the shelf takes input.
 ///
 /// The supplied `contentView` is installed as `panel.contentView` directly.
-/// Callers (T12 onwards) wrap their `NSHostingView` in a custom NSView at this
-/// level if they wish to register for dragged types — the controller is
-/// agnostic to that wrapping.
+/// Callers wrap their `NSHostingView` in a custom NSView at this level if
+/// they wish to register for dragged types — the controller is agnostic to
+/// that wrapping.
 @MainActor
 public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public let shelfID: ShelfID
@@ -54,8 +54,8 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     ///   - contentView: NSView installed as `panel.contentView`. Typically an
     ///     `NSHostingView` or a custom NSView that wraps one.
     ///   - atOrigin: bottom-left point in screen coordinates for the panel's frame.
-    ///   - panelSize: initial panel size. Defaults to 360x240. v1 does not
-    ///     persist per-shelf size; resize survives only as long as the panel
+    ///   - panelSize: initial panel size. Defaults to 360x240. Per-shelf size
+    ///     is not persisted; resize survives only as long as the panel
     ///     instance does (`isReleasedWhenClosed = false`).
     public init(
         shelfID: ShelfID,
@@ -81,9 +81,10 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         // Per Spike B canonical config — do not deviate without updating the spike.
         panel.level = .floating
         panel.collectionBehavior = [.fullScreenAuxiliary, .canJoinAllSpaces]
-        // Post-MVP fix: must be `false` so SwiftUI taps transition the panel to
-        // key state, which arms Esc/Space hotkeys via AppCoordinator. Pairs
-        // safely with `.nonactivatingPanel` — Shelf still does not activate.
+        // Must be `false` so SwiftUI taps transition the panel to key state,
+        // which arms Esc/Space hotkeys via AppCoordinator. Pairs safely with
+        // `.nonactivatingPanel` — Shelf still does not activate. See the
+        // class docstring for the failure mode of the `true` setting.
         panel.becomesKeyOnlyIfNeeded = false
         panel.isFloatingPanel = true
         panel.titlebarAppearsTransparent = true

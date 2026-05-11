@@ -17,9 +17,8 @@
 // per-process property reads.
 //
 // This class is standalone: it owns the timers and the heuristic, and emits
-// a single callback when a shake is recognised mid-drag. T18 will compose it
-// with ShelfWindowManager via AppDelegate; this file MUST NOT touch other
-// modules.
+// a single callback when a shake is recognised mid-drag. Detect/ MUST NOT
+// depend on Drag/ or Window/ — composition is the AppCoordinator's job.
 import AppKit
 import Foundation
 import OSLog

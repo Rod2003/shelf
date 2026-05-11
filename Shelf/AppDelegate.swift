@@ -20,8 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         enforceSingleInstance()
 
-        // T18: AppCoordinator owns composition of every standalone controller.
-        // It must be retained on AppDelegate so its sub-controllers stay alive
+        // AppCoordinator owns composition of every standalone controller and
+        // must be retained on AppDelegate so its sub-controllers stay alive
         // across the app's lifetime.
         let coord = AppCoordinator()
         coord.bootstrap()
@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-        // Required by macOS 14+ to avoid warnings; we have no restorable state in v1.
+        // Required by macOS 14+ to avoid warnings; Shelf has no restorable state.
         return true
     }
 

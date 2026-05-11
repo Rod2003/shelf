@@ -361,11 +361,11 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             // and never invoke `writePromiseTo`; without this the drag
             // silently does nothing in those destinations.
             //
-            // We deliberately don't pair `release(_:)` here — for the
-            // unsandboxed v1 build `startAccessingSecurityScopedResource`
-            // is a no-op, so the leaked access is also a no-op. Future
-            // sandboxed builds will need explicit lifetime management
-            // tied to the drag session (release in `endedAt`).
+            // We deliberately don't pair `release(_:)` here — while the app
+            // is unsandboxed, `startAccessingSecurityScopedResource` is a
+            // no-op, so the leaked access is also a no-op. Future sandboxed
+            // builds will need explicit lifetime management tied to the
+            // drag session (release in `endedAt`).
             let resolvedURL: URL?
             do {
                 let resolution = try BookmarkResolver().resolve(record)

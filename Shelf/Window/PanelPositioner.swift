@@ -13,8 +13,8 @@ import Foundation
 ///   (~30 px in), then `clamp(...)` pulls the rect back inside the cursor's
 ///   screen `visibleFrame` (which already excludes menu bar / Dock) minus an
 ///   `edgeMargin` so the panel never hugs the screen edge.
-/// - `cascadeOffsetPx` matches `ShelfWindowManager.cascadeOffsetPx` (T11) so
-///   the cascade visual is consistent regardless of which layer applies it.
+/// - `cascadeOffsetPx` matches `ShelfWindowManager.cascadeOffsetPx` so the
+///   cascade visual is consistent regardless of which layer applies it.
 @MainActor
 public enum PanelPositioner {
     /// Minimum gap (in points) between the panel rect and the screen's
@@ -23,12 +23,12 @@ public enum PanelPositioner {
     public static let edgeMargin: CGFloat = 8
 
     /// Default panel size used when callers don't supply one. Matches the
-    /// initial NSPanel size in `ShelfWindowController` (T11).
+    /// initial NSPanel size in `ShelfWindowController`.
     public static let defaultPanelSize = CGSize(width: 180, height: 180)
 
     /// Pixel offset applied per simultaneously-open panel for the visual
-    /// cascade. Mirrored from `ShelfWindowManager.cascadeOffsetPx` (T11) so
-    /// callers using either layer see identical spacing.
+    /// cascade. Mirrored from `ShelfWindowManager.cascadeOffsetPx` so callers
+    /// using either layer see identical spacing.
     public static let cascadeOffsetPx: CGFloat = 30
 
     /// Lightweight, value-type screen descriptor. Initialized from `NSScreen`
@@ -101,7 +101,7 @@ public enum PanelPositioner {
     /// already-visible panels.
     ///
     /// Wraps back to the base origin every 8 panels — well beyond the 5-shelf
-    /// cap (T11) — as a defensive guard so a runaway open-count never marches
+    /// cap — as a defensive guard so a runaway open-count never marches
     /// the cascade off-screen.
     ///
     /// - Parameters:

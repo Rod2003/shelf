@@ -1,4 +1,4 @@
-// Shelf — drag-IN destination view (T13).
+// Drag-IN destination view.
 //
 // `DragInView` is a thin `NSView` subclass that registers as an
 // `NSDraggingDestination` for the multi-type pasteboard drops a Shelf accepts:
@@ -6,17 +6,8 @@
 // presentation-agnostic: it does not own a `ShelfStore`, does not know about
 // `Shelf` identity, and does not push items anywhere itself. Successful drops
 // are converted by `DragItemFactory` into `[ShelfItem]` and delivered via the
-// `onDrop` closure that the integrating coordinator (T18) sets at composition
-// time.
-//
-// Per Spike B + the T11 Window Manager findings, the integration pattern is:
-//
-//     let drag = DragInView(frame: ...)
-//     drag.addSubview(NSHostingView(rootView: ShelfContentView(...)))
-//     drag.onDrop = { [weak coordinator] items in coordinator?.dropped(items, into: shelfID) }
-//     manager.openShelf(id, contentView: drag, baseOrigin: ...)
-//
-// AppDelegate / window code is NOT modified by T13. T18 owns composition.
+// `onDrop` closure the integrating coordinator sets at composition time.
+
 import AppKit
 import OSLog
 import ShelfCore
@@ -25,15 +16,15 @@ import ShelfCore
 /// and converts incoming drops to `[ShelfItem]` via `DragItemFactory`.
 ///
 /// The view exposes a single output: `onDrop`, a closure invoked with the
-/// extracted items on a successful `performDragOperation`. The view does NOT
+/// extracted items on a successful `performDragOperation`. The view does not
 /// retain any reference to a `ShelfStore`; persisting items is the
-/// integrator's responsibility (T18).
+/// integrator's responsibility.
 @MainActor
 public final class DragInView: NSView {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
 
     /// Callback invoked with the items derived from a successful drop.
-    /// Set by the integrating coordinator (T18). If left `nil`, drops are
+    /// Set by the integrating coordinator. If left `nil`, drops are
     /// still accepted at the AppKit layer (we return `true` from
     /// `performDragOperation`) but the items are silently dropped — that is
     /// useful behavior for tests and previews; production wires this up.

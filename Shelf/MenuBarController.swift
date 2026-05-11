@@ -5,22 +5,21 @@ import ShelfCore
 /// Owns the NSStatusBar item for Shelf and its drop-down NSMenu.
 ///
 /// MenuBarController is presentation-only. It exposes optional callbacks that
-/// the AppCoordinator (T18) wires up at composition time. It does NOT
-/// instantiate stores, register hotkeys, or persist any state.
+/// the AppCoordinator wires up at composition time. It does not instantiate
+/// stores, register hotkeys, or persist any state.
 ///
 /// Threading: NSStatusBar and NSMenu are main-thread-only, so this class is
-/// `@MainActor`. AppDelegate (T8) is also `@MainActor`, so the actor hop is
-/// trivial when AppCoordinator owns this controller.
+/// `@MainActor`.
 @MainActor
 public final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
 
-    // MARK: Callbacks (late-bound by AppCoordinator in T18)
+    // MARK: Callbacks (late-bound by AppCoordinator)
 
     /// Invoked when the user picks "New Shelf" from the menu.
-    /// Note: the menu item shows ⌘⇧Space as a HINT only. The actual global
-    /// hotkey routing lives in T10's HotkeyManager via Carbon
+    /// Note: the menu item shows ⌘⇧Space as a hint only. The actual global
+    /// hotkey routing lives in `HotkeyManager` via Carbon
     /// `RegisterEventHotKey`. The menu key-equivalent and the Carbon hotkey
     /// are independent code paths that can coexist without conflict.
     public var onNewShelf: (() -> Void)?
@@ -135,7 +134,7 @@ public final class MenuBarController: NSObject {
         // i18n: "Quit Shelf"
         // ⌘Q is a menu shortcut (NSMenu key equivalent), distinct from the
         // Carbon RegisterEventHotKey path used for the global ⌘⇧Space hotkey.
-        // No coordination with HotkeyManager (T10) is needed.
+        // No coordination with HotkeyManager is needed.
         let quitItem = NSMenuItem(
             title: "Quit Shelf",
             action: #selector(handleQuit),

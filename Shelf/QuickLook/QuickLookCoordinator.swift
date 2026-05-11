@@ -1,22 +1,14 @@
-// Shelf — Quick Look panel lifecycle coordinator (T19).
+// Quick Look panel lifecycle coordinator.
 //
-// Owns a single `QLPreviewPanel` shared instance and its data source /
-// delegate wiring. Callers (the App Coordinator in T18, or the shelf
-// content view via a binding) push the URLs they want previewed via
-// `show(urls:)`; passing an empty array dismisses any open panel.
+// Owns a single `QLPreviewPanel.shared()` data source / delegate wiring.
+// Callers push URLs they want previewed via `show(urls:)`; an empty array
+// dismisses the panel.
 //
 // Quick Look's panel is a singleton owned by AppKit, so this class does
 // NOT retain it. It only retains the URLs currently being previewed so
-// the data source can answer count/index queries. The panel asks us for
-// items synchronously on the main thread, which is why the type is
-// `@MainActor`.
-//
-// V1 scope:
-// - File URLs only; non-file kinds (webURL, text, clipboardImage with no
-//   on-disk backing) are filtered out by the call site before this
-//   coordinator is invoked.
-// - Default `QLPreviewPanelDelegate` behavior is sufficient (no custom
-//   transition rects, no override of "should handle key down").
+// the data source can answer count/index queries. The panel queries
+// synchronously on the main thread, which is why the type is `@MainActor`.
+
 import AppKit
 import QuickLookUI
 import OSLog
@@ -26,8 +18,8 @@ import ShelfCore
 ///
 /// Lifetime: one instance per shelf window is fine; the underlying
 /// `QLPreviewPanel.shared()` is process-wide, so concurrent shelves
-/// will fight over its data source. V1 ships one shelf at a time, so
-/// this is acceptable.
+/// will fight over its data source. Only one shelf shows Quick Look at
+/// a time, so this is acceptable.
 @MainActor
 public final class QuickLookCoordinator: NSObject {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
@@ -64,7 +56,4 @@ extension QuickLookCoordinator: QLPreviewPanelDataSource {
     }
 }
 
-extension QuickLookCoordinator: QLPreviewPanelDelegate {
-    // Default delegate behavior is fine for v1. Hook points (transition
-    // image, key-down forwarding) can be added when we need them.
-}
+extension QuickLookCoordinator: QLPreviewPanelDelegate {}

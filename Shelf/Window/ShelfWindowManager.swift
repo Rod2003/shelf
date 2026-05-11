@@ -11,15 +11,14 @@ import ShelfCore
 /// false` is necessary but not sufficient — without our strong reference,
 /// the controller plus panel would still be released).
 ///
-/// This type is presentation-only. It does NOT instantiate `ShelfStore` or
-/// any model layer; the caller (T18 `AppCoordinator`) supplies a fully-built
-/// `NSView` for the panel content. This keeps T11 free of model-layer
-/// dependencies and lets T12 evolve independently.
+/// This type is presentation-only. It does not instantiate `ShelfStore` or
+/// any model layer; the caller (`AppCoordinator`) supplies a fully-built
+/// `NSView` for the panel content.
 @MainActor
 public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
     /// Pixel offset applied per simultaneously-open panel for visual cascade.
-    /// This value is shared between the manager (when stacking new panels) and
-    /// any future PanelPositioner (T16) that needs to know about cascading.
+    /// Mirrored in `PanelPositioner.cascadeOffsetPx` so both layers stack
+    /// panels with identical spacing.
     public static let cascadeOffsetPx: CGFloat = 30
 
     private var controllers: [ShelfID: ShelfWindowController] = [:]
@@ -75,9 +74,9 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
     /// - Parameters:
     ///   - shelfID: identity of the shelf to open.
     ///   - contentView: NSView to install as the panel's contentView. Typically
-    ///     an `NSHostingView` or a drag-receiving NSView wrapping one (T12/T13).
+    ///     an `NSHostingView` or a drag-receiving NSView wrapping one.
     ///   - baseOrigin: anchor point (screen coordinates) before cascade offset.
-    ///     Computed by the caller via `PanelPositioner` (T16).
+    ///     Computed by the caller via `PanelPositioner`.
     public func openShelf(_ shelfID: ShelfID, contentView: NSView, baseOrigin: CGPoint) {
         if let existing = controllers[shelfID] {
             existing.show()
@@ -113,7 +112,7 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
     }
 
     /// Return the `ShelfID` whose panel is currently key, or `nil` if none.
-    /// Used by paste/shake handlers (T15+) to target the right shelf.
+    /// Used by paste/shake handlers to target the right shelf.
     public func currentlyKeyShelf() -> ShelfID? {
         controllers.values.first { $0.panel.isKeyWindow }?.shelfID
     }
@@ -156,9 +155,9 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
     /// non-isolated synchronous context, which would fail @MainActor
     /// isolation on `liveScreens()`.
     ///
-    /// Per T20 scope: positions are NOT persisted to ShelfStore (positions
-    /// are ephemeral; cursor decides at next open). Per-shelf "preferred
-    /// screen" is also out of scope — repositioning is silent and uniform.
+    /// Positions are not persisted to ShelfStore (they're ephemeral — cursor
+    /// decides at next open). Per-shelf "preferred screen" is out of scope
+    /// too: repositioning is silent and uniform.
     public func repositionPanelsForScreenChange(
         screens: [PanelPositioner.Screen]? = nil
     ) {

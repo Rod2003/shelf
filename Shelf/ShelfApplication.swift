@@ -12,7 +12,6 @@ import AppKit
 @MainActor
 final class ShelfApplication: NSApplication {
     override func sendEvent(_ event: NSEvent) {
-        // Marker subclass — T15 may extend this if Spike-A-derived polling proves insufficient.
         super.sendEvent(event)
     }
 }

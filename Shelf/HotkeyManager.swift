@@ -11,7 +11,7 @@ import OSLog
 ///
 /// The bare-Space hotkey is dangerous if registered globally (would steal every Space
 /// keypress in every app), so registration of Esc/Space is gated by the AppCoordinator
-/// (T18) via `setEscEnabled(_:)` / `setSpaceEnabled(_:)`.
+/// via `setEscEnabled(_:)` / `setSpaceEnabled(_:)`.
 ///
 /// Carbon's `RegisterEventHotKey` does NOT trigger a TCC permission prompt at first
 /// launch — verified empirically by Dropover and the explore reports. This is the
@@ -38,7 +38,7 @@ public final class HotkeyManager {
     /// callback. Installed once at init; removed at deinit.
     private var eventHandlerRef: EventHandlerRef?
 
-    /// Callbacks injected by AppCoordinator (T18). Kept optional so the manager is
+    /// Callbacks injected by AppCoordinator. Kept optional so the manager is
     /// safe to instantiate before its consumers exist.
     public var onNewShelf: (() -> Void)?
     public var onCloseFrontmost: (() -> Void)?
@@ -47,7 +47,7 @@ public final class HotkeyManager {
     public init() {
         installCarbonEventHandler()
         // ⌘⇧Space stays registered for app lifetime. Esc and Space are registered
-        // on demand by AppCoordinator (T18) via the gating methods below.
+        // on demand by AppCoordinator via the gating methods below.
         register(.newShelf)
     }
 
@@ -64,7 +64,7 @@ public final class HotkeyManager {
         }
     }
 
-    // MARK: Public gating API (called by AppCoordinator / ShelfWindowManager in T18)
+    // MARK: Public gating API
 
     /// Enable Esc hotkey when a shelf becomes key window. Disable when no shelf is key.
     public func setEscEnabled(_ enabled: Bool) {

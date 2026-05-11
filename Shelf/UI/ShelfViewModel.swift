@@ -1,12 +1,13 @@
-// Shelf — UI presentation layer for a single shelf's contents.
+// UI presentation layer for a single shelf's contents.
 // Bridges ShelfCore value types to SwiftUI via Combine's ObservableObject.
 //
 // This view model is intentionally a thin, optimistic-state container:
-// - It does NOT call ShelfStore directly. The App Coordinator (T18) owns
-//   the store and pushes updates into the view model via `reload(from:)`.
+// - It does not call ShelfStore directly. The AppCoordinator owns the
+//   store and pushes updates in via `reload(from:)`.
 // - The mutating helpers (`remove`, `reorder`) produce local optimistic
-//   updates so that drag-OUT (T14) and shake-evict (T15) interactions feel
-//   instant; the call site is responsible for persisting the change.
+//   updates so drag-OUT and shake-evict feel instant; the call site is
+//   responsible for persisting the change.
+
 import Foundation
 import Combine
 import ShelfCore
@@ -21,10 +22,10 @@ public final class ShelfViewModel: ObservableObject {
     public let shelfID: ShelfID
     @Published public var name: String
     @Published public var items: [ShelfItem]
-    /// Currently-selected item, used by the App Coordinator (T18) to drive
-    /// the Quick Look coordinator and by `ShelfItemView` to render its
-    /// selection background. `nil` means no selection. Mutating here is
-    /// purely a presentation-state change; persistence is not involved.
+    /// Currently-selected item, used by the AppCoordinator to drive the
+    /// Quick Look coordinator and by `ShelfItemView` to render its selection
+    /// background. `nil` means no selection. Mutating here is purely a
+    /// presentation-state change; persistence is not involved.
     @Published public var selectedItemID: ItemID?
 
     public init(shelf: Shelf) {
@@ -47,7 +48,7 @@ public final class ShelfViewModel: ObservableObject {
     }
 
     /// Optimistically remove an item from the local list. Persistence via
-    /// `ShelfStore.update(...)` is the call site's responsibility (T14/T15).
+    /// `ShelfStore.update(...)` is the call site's responsibility.
     public func remove(itemID: ItemID) {
         items.removeAll { $0.id == itemID }
         if selectedItemID == itemID { selectedItemID = nil }
