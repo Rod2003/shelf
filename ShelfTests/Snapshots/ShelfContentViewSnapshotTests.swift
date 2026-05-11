@@ -1,4 +1,4 @@
-// Shelf — visual regression tests for ShelfContentView (T25).
+// Visual regression tests for ShelfContentView.
 //
 // We host the SwiftUI view inside an `NSHostingView` and ask
 // swift-snapshot-testing to capture a PNG against a fixed frame, in both

@@ -1,4 +1,4 @@
-// Shelf — T24 integration tests for the persistence layer.
+// Integration tests for the persistence layer.
 //
 // Verifies the contract `DefaultsBackend` (Shelf app target) makes with
 // `ShelfStore` (ShelfCore) when bound to a real `UserDefaults` suite:
