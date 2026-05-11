@@ -1,24 +1,17 @@
-// Shelf — AppKit/SwiftUI bridge factory for shelf panel content.
+// AppKit/SwiftUI bridge factory for shelf panel content.
 //
 // Produces the view hierarchy that `ShelfWindowController` installs as
 // `panel.contentView`. The hierarchy is intentionally two-layered:
 //
-//   wrapper (NSView) ← future home of NSDraggingDestination registration (T13)
+//   wrapper (NSView) ← NSDraggingDestination registration lives here
 //     └── hosting (NSHostingView<ShelfContentView>)  ← SwiftUI content
 //
-// We keep the wrapper as a plain `NSView` here so that T13 can subclass or
-// extend it with `registerForDraggedTypes(_:)` and `draggingEntered/Updated/
-// Performed/Exited` overrides without disturbing the SwiftUI hosting view.
-// Per Spike B findings (notepad), drag registration MUST live at this AppKit
-// seam; attempting it inside the SwiftUI hierarchy is unsupported.
-//
-// T19 extends `makeContentView` with two optional dependencies that are
-// forwarded into `ShelfContentView`:
-//   • `resolver` — used by cells to resolve file bookmarks for thumbnails
-//     and to detect missing files for the ⚠️ overlay.
-//   • `thumbnailService` — actor-isolated QL thumbnail cache.
-// Both default to `nil` so existing call sites remain source-compatible
-// until T18 wires the real services in.
+// We keep the wrapper as a plain `NSView` so a subclass can add
+// `registerForDraggedTypes(_:)` and `draggingEntered/Updated/Performed/
+// Exited` overrides without disturbing the SwiftUI hosting view. Per
+// Spike B, drag registration MUST live at this AppKit seam — attempting
+// it inside the SwiftUI hierarchy is unsupported.
+
 import AppKit
 import SwiftUI
 import ShelfCore
@@ -40,7 +33,7 @@ public enum ContentViewFactory {
     ///   - resolver: optional bookmark resolver forwarded to each cell.
     ///   - thumbnailService: optional thumbnail service forwarded to each cell.
     /// - Returns: a parent `NSView` with an `NSHostingView<ShelfContentView>`
-    ///   subview pinned via autoresizing masks. T13 registers drag types on
+    ///   subview pinned via autoresizing masks. Drag types are registered on
     ///   this returned view (or a subclass thereof) without touching the
     ///   inner hosting view.
     public static func makeContentView(

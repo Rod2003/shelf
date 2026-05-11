@@ -1,11 +1,10 @@
-// Shelf — T24 integration tests for `HotkeyManager`.
+// Integration tests for `HotkeyManager`.
 //
 // These tests exercise the lifecycle and gating API of the production
 // `HotkeyManager` against the real Carbon `RegisterEventHotKey` /
-// `UnregisterEventHotKey` plumbing. They DO NOT attempt to fire real
-// hotkey events (that requires a real keyboard event source and is out
-// of scope for unit tests; the live keypress path is covered by T26
-// agent QA via AppleScript).
+// `UnregisterEventHotKey` plumbing. They do not attempt to fire real
+// hotkey events — that requires a real keyboard event source and is
+// covered by manual QA instead.
 //
 // What is verified:
 //   * `init()` runs to completion (installs the Carbon event handler;
@@ -16,12 +15,10 @@
 //     `onQuickLook`) are assignable and callable through the optional
 //     property surface.
 //
-// What is intentionally NOT covered:
+// What is intentionally not covered:
 //   * Direct invocation of the private `dispatch(id:)` method. That
-//     method is `private` in production; exposing it would require
-//     modifying app source, which the T24 spec forbids. The dispatch
-//     path is exercised end-to-end by T26 QA scenarios that fire real
-//     hotkey events.
+//     method stays `private` in production; the dispatch path is
+//     exercised by manual QA scenarios that fire real hotkey events.
 //
 // Concurrency:
 //   * `HotkeyManager` is `@MainActor`-isolated; tests are

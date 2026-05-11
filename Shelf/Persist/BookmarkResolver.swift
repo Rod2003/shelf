@@ -1,21 +1,6 @@
-// Shelf — app-target bookmark resolver (T14).
-//
-// Resolves opaque `BookmarkRecord.bookmarkData` blobs (produced by `T13`
-// drag-IN handling) back into concrete file URLs at drag-OUT time, handling
-// stale-bookmark refresh and the security-scoped accessor pairing required by
-// future MAS / sandbox migration.
-//
-// In v1 (non-sandboxed) `startAccessingSecurityScopedResource()` is documented
-// to be a no-op; the API surface is preserved so a future
-// sandbox-on flip flicks no callers. Callers are responsible for invoking
-// `release(_:)` when they have finished using the resolved URL — that pairs
-// the implicit `startAccessingSecurityScopedResource` performed by
-// `resolve(_:)` with a matching stop, even though both calls are no-ops in
-// the unsandboxed v1 build.
-//
-// This file is the only T14 deliverable in `Shelf/Persist/`. It does NOT
-// touch `DefaultsBackend` (T17) and is consumed exclusively by
-// `FilePromiseDelegate` (T14, `Shelf/Drag/`).
+// Resolves opaque `BookmarkRecord.bookmarkData` blobs back into concrete
+// file URLs at drag-OUT time, handling stale-bookmark refresh and the
+// security-scoped accessor pairing required by a future sandbox migration.
 
 import Foundation
 import OSLog
@@ -23,8 +8,9 @@ import ShelfCore
 
 /// Resolves opaque bookmark blobs to file URLs, handling stale bookmark refresh.
 ///
-/// In v1 (non-sandboxed) `startAccessingSecurityScopedResource()` is a no-op;
-/// the API is preserved for forward MAS / sandboxed-build compatibility.
+/// While the app is unsandboxed `startAccessingSecurityScopedResource()` is a
+/// no-op; the API is preserved so the eventual sandbox flip needs no caller
+/// changes.
 ///
 /// Sendable: the resolver holds only a `Logger` (Sendable) and has no mutable
 /// state — it is effectively immutable. Declared `Sendable` explicitly so

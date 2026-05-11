@@ -1,4 +1,4 @@
-// Shelf — T24 integration tests for drag-IN logic.
+// Integration tests for drag-IN logic.
 //
 // Verifies that `DragItemFactory.makeItems(from:)` honors its documented
 // pasteboard precedence rule (`.fileURL` > web URL > image > `.string`)
@@ -10,14 +10,10 @@
 // temporary files under `FileManager.default.temporaryDirectory` so they
 // run cleanly in any environment without privileged paths.
 //
-// What is NOT covered here (out of scope for T24):
-//   * Live drag from another app — that's T26 agent QA.
+// What is NOT covered here:
+//   * Live drag from another app — manual QA territory.
 //   * `DragInView.performDragOperation(_:)` end-to-end — UI surface.
 //   * `DragOutSource` full file-promise flow — same.
-//
-// Per the T24 spec, the pasteboard precedence + item-construction layer
-// is the unit of integration we cover at this level; the remaining
-// surfaces are covered by T26.
 
 import AppKit
 import XCTest

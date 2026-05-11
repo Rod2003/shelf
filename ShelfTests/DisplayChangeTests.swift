@@ -4,7 +4,7 @@ import XCTest
 @testable import Shelf
 
 /// Verifies the decision logic that drives
-/// `ShelfWindowManager.repositionPanelsForScreenChange(screens:)` (T20).
+/// `ShelfWindowManager.repositionPanelsForScreenChange(screens:)`.
 ///
 /// We deliberately do NOT instantiate real `NSPanel` / `NSWindow` instances
 /// in these tests because:
@@ -15,14 +15,13 @@ import XCTest
 ///      check. Verifying those primitives end-to-end is sufficient.
 ///
 /// Live, end-to-end "drag the display arrangement and confirm the shelf
-/// moved" verification is deferred to T26 agent QA per the T20 plan
-/// scenario `AC-PO-05 display arrangement change with shelf open`.
+/// moved" verification is deferred to manual / agent QA.
 @MainActor
 final class DisplayChangeTests: XCTestCase {
 
     // MARK: AC-PO-06 — off-screen panel repositions to first screen
 
-    /// Simulates the canonical T20 scenario: a shelf was open on a secondary
+    /// Simulates the canonical scenario: a shelf was open on a secondary
     /// display, the display was disconnected, and the panel's last frame is
     /// now entirely outside any remaining screen's visibleFrame. Confirms
     /// the manager's centering math lands inside the surviving screen and

@@ -1,26 +1,18 @@
-// Shelf — `NSFilePromiseProvider` delegate (T14).
+// `NSFilePromiseProvider` delegate.
 //
 // Implements the lazy / on-demand file delivery half of drag-OUT for
 // `.fileBookmark` and `.clipboardImage` ShelfItems. Web-URL and plain-text
 // items use `NSPasteboardItem` directly via `DragOutSource`; only file-style
 // items need a promise provider.
 //
-// Apple's `NSFilePromiseProviderDelegate` requires three methods:
-//   • `filePromiseProvider(_:fileNameForType:)` — supply the destination filename
-//   • `operationQueue(for:)` — return a serial queue for the write operation
-//   • `filePromiseProvider(_:writePromiseTo:completionHandler:)` — perform the
-//     copy on the operation queue and call `completionHandler(nil)` on success
-//
 // Concurrency model:
 //   • The class is `@MainActor` because `pendingItems` is mutated from the
 //     main thread (`DragOutSource.makePasteboardWriter(for:)` is called from
 //     SwiftUI / AppKit drag-start code). Holding it on the main actor avoids
 //     a separate lock for the dictionary.
-//   • `operationQueue(for:)` is `nonisolated` and returns a queue stored as
-//     `nonisolated(unsafe) let` — `OperationQueue` is documented as
-//     thread-safe, so direct nonisolated access is correct without the
-//     fragile `MainActor.assumeIsolated` dance. (See deviation note in
-//     notepad: `## T14 Drag-OUT Findings`.)
+//   • `operationQueue(for:)` is `nonisolated`. `OperationQueue` is documented
+//     as thread-safe, so direct nonisolated access is correct without a
+//     `MainActor.assumeIsolated` dance.
 //   • `writePromiseTo` is `nonisolated`; AppKit invokes it on our returned
 //     operation queue. We hop to the main actor briefly to read the
 //     `pendingItems` snapshot, then dispatch the actual file copy back onto
@@ -61,10 +53,8 @@ public final class FilePromiseDelegate: NSObject, NSFilePromiseProviderDelegate 
     /// `DragOutSource.makePasteboardWriter(for:)` populates this dictionary
     /// before returning the `NSFilePromiseProvider` to the dragging session.
     /// Entries are read on the main actor inside the `writePromiseTo`
-    /// callback; entries are NOT removed automatically — `DragOutSource`'s
-    /// `draggingSession(_:endedAt:operation:)` could prune, but in v1 the
-    /// dictionary growth is bounded by user drag activity in a single
-    /// session and is acceptable.
+    /// callback; entries are not removed automatically — growth is bounded
+    /// by user drag activity within a session, which is acceptable.
     public var pendingItems: [String: ShelfItem] = [:]
 
     public init(resolver: BookmarkResolver = BookmarkResolver()) {

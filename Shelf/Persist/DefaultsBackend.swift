@@ -1,12 +1,3 @@
-// Shelf — app target.
-// Production-side wrapper around `ShelfCore.ShelfStore` that owns the
-// canonical UserDefaults suite + key prefix and ensures the Application
-// Support directory tree exists on first launch.
-//
-// This file is the only T17 deliverable. T18 instantiates `DefaultsBackend`
-// from the AppDelegate / AppCoordinator and injects `makeShelfStore()`
-// into the rest of the app.
-
 import Foundation
 import OSLog
 import ShelfCore
@@ -20,14 +11,11 @@ import ShelfCore
 ///   ensured on first launch.
 ///
 /// It is deliberately a thin app-layer wrapper: all storage logic lives in
-/// `ShelfCore.ShelfStore`. Per Metis directive, there is NO `ShelfStoring`
-/// protocol; this is a single concrete `final class`.
+/// `ShelfCore.ShelfStore`.
 ///
-/// FUTURE: When the app is code-signed and notarized, migrate to an App Group
+/// When the app is code-signed and notarized, migrate to an App Group
 /// container (e.g. `group.dev.rod.shelf`) so a Shelf widget extension can
-/// share the same `UserDefaults` suite and Application Support tree. See
-/// plan §Architecture Adjustments and Override O-1 reasoning — App Group
-/// entitlements are forbidden for unsigned dev builds.
+/// share the same `UserDefaults` suite and Application Support tree.
 public final class DefaultsBackend {
 
     /// Canonical key prefix for production. Matches the app bundle identifier

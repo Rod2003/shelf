@@ -1,11 +1,10 @@
-// Shelf — App Coordinator (T18).
+// App Coordinator — single composition root for the Shelf app.
 //
-// `AppCoordinator` is the single composition root of the Shelf app. It
-// instantiates every standalone controller delivered in T8–T17 + T19 and
-// wires them together via the public callback closures each controller
-// exposes for late binding. AppDelegate (T8) constructs exactly one
-// `AppCoordinator` in `applicationDidFinishLaunching` and tears it down
-// in `applicationWillTerminate`.
+// `AppCoordinator` instantiates every standalone controller and wires them
+// together via the public callback closures each controller exposes for
+// late binding. AppDelegate constructs exactly one `AppCoordinator` in
+// `applicationDidFinishLaunching` and tears it down in
+// `applicationWillTerminate`.
 //
 // Responsibilities:
 //   • Persistence: own one `DefaultsBackend` + `ShelfStore` for the app's
@@ -18,17 +17,12 @@
 //     one `QuickLookCoordinator`. Construct one `ShelfViewModel` per open
 //     shelf, plumb store mutations through to the view model.
 //   • Drag-out machinery: own one shared `FilePromiseDelegate` +
-//     `DragOutSource` for forward-compat (v1 does not initiate drag-out
-//     from cells; the architecture is in place for v1.5 polish).
+//     `DragOutSource`.
 //
 // Threading: `@MainActor`. All controllers are `@MainActor` or otherwise
-// main-thread-safe. `ShelfStore.onChange` may fire from any thread (per
-// T7 findings); we hop to MainActor explicitly before touching any
-// view-side state from inside that callback.
-//
-// Per Override O-1: no networking, no SMAppService.mainApp.register, no
-// TCC prompts. Hardcoded recent-cap of 5 lives in `ShelfStore.recentCap`
-// and is NOT user-configurable.
+// main-thread-safe. `ShelfStore.onChange` may fire from any thread, so we
+// hop to MainActor explicitly before touching any view-side state from
+// inside that callback.
 
 import AppKit
 import OSLog
@@ -263,7 +257,7 @@ public final class AppCoordinator {
 
     /// Open Quick Look for the selected item of the currently-key shelf,
     /// or the first item if nothing is selected. Non-file kinds
-    /// (`.webURL`, `.text`) are no-ops in v1.
+    /// (`.webURL`, `.text`) are no-ops.
     ///
     /// Each guard logs at debug level so a Console trace makes the failing
     /// link obvious — this method previously failed silently when invoked
@@ -316,7 +310,6 @@ public final class AppCoordinator {
             }
 
         case .webURL, .text:
-            // No native QL preview for non-file kinds in v1.
             log.debug("Quick Look skipped for non-file item kind")
         }
     }

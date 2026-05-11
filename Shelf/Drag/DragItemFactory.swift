@@ -1,10 +1,10 @@
-// Shelf — pasteboard → ShelfItem conversion (T13).
+// Pasteboard → ShelfItem conversion.
 //
-// `DragItemFactory` is the pure conversion layer between
-// `NSPasteboard` (an AppKit type) and `[ShelfItem]` (a ShelfCore value type).
-// It encapsulates the precedence rule (file URL > web URL > image > text),
-// security-scoped bookmark creation, and clipboard-image persistence. Every
-// public surface is `static` because the factory holds no state.
+// `DragItemFactory` is the pure conversion layer between `NSPasteboard`
+// (an AppKit type) and `[ShelfItem]` (a ShelfCore value type). It
+// encapsulates the precedence rule (file URL > web URL > image > text),
+// security-scoped bookmark creation, and clipboard-image persistence.
+// Every public surface is `static` because the factory holds no state.
 //
 // Pasteboard precedence (highest first):
 //   1. `.fileURL`           → `.fileBookmark` (security-scoped if available)
@@ -12,18 +12,14 @@
 //   3. image data           → `.clipboardImage` (PNG written to App Support)
 //   4. `.string`            → `.text`
 //
-// Folders are stored as a single `.fileBookmark` item (NOT expanded). Symlinks
-// are stored as-is (not resolved). The factory makes ZERO outbound network
-// calls (no URL HEAD, no favicon fetch) — those would violate Override O-1's
-// "no networking" rule.
+// Folders are stored as a single `.fileBookmark` item (not expanded).
+// Symlinks are stored as-is. The factory makes zero outbound network calls.
 //
 // ## Application Support persistence
 //
 // Clipboard images are written to:
 //   `~/Library/Application Support/Shelf/clipboard-images/`
-// The directory is created on demand. There is no migration logic in v1: a
-// future task will migrate this path to an App Group container if Shelf grows
-// extensions / share sheets / a Helper.
+// The directory is created on demand.
 //
 // ## Security-scoped bookmarks
 //
@@ -31,7 +27,8 @@
 // Outside of a sandbox the option is a no-op (the resulting Data still
 // resolves correctly), but it is forward-compat for the day Shelf opts into
 // the App Sandbox. Resolving these bookmarks is the responsibility of the
-// `BookmarkResolver` (T17).
+// `BookmarkResolver`.
+
 import AppKit
 import Foundation
 import OSLog
@@ -240,10 +237,6 @@ public enum DragItemFactory {
     /// Created on demand. Returns `nil` only if Application Support is
     /// unreachable (e.g. a heavily restricted environment where
     /// `FileManager.urls(for:in:)` returns empty).
-    ///
-    /// NOTE (Metis): no migration logic here. A future task will move this
-    /// path to an App Group container if/when Shelf gains extensions or a
-    /// helper.
     private static func clipboardImagesDirectory() -> URL? {
         let fm = FileManager.default
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {

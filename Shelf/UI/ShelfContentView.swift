@@ -1,6 +1,6 @@
-// Shelf — top-level SwiftUI content for one shelf panel.
+// Top-level SwiftUI content for one shelf panel.
 //
-// Layout (post header-removal + drag-handle + close-button additions):
+// Layout:
 //   ┌──────────────────────────────────┐
 //   │  [drag region]               [×] │  invisible 28pt drag strip
 //   │                                  │
@@ -9,15 +9,10 @@
 //   └──────────────────────────────────┘
 //
 // Drag-IN registration lives on the AppKit wrapper NSView produced by
-// ContentViewFactory (T13's responsibility). Drag-OUT lives on the cell
-// (T14). This view is presentation-only.
-//
-// T19 extends this presentation layer with two opt-in seams:
-//   • `resolver` + `thumbnailService` are forwarded to each `ShelfItemView`
-//     so file items render real Quick Look thumbnails and can flag
-//     missing bookmarks.
-//   • Tap selection updates `viewModel.selectedItemID`, which the App
-//     Coordinator (T18) reads to drive `QuickLookCoordinator`.
+// `ContentViewFactory`. Drag-OUT lives on the cell. This view is
+// presentation-only; tap selection updates `viewModel.selectedItemID`
+// which the AppCoordinator reads to drive `QuickLookCoordinator`.
+
 import SwiftUI
 import ShelfCore
 
