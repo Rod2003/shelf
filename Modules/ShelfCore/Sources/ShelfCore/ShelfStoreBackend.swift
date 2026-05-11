@@ -4,12 +4,8 @@ import Foundation
 
 /// Selects the storage strategy used by `ShelfStore`.
 ///
-/// `ShelfStore` is a single concrete `final class`; the variation in storage
-/// behavior is expressed through this enum (per Metis directive: concrete
-/// types only, NO storage-protocol abstraction).
-///
-/// - `inMemory`: holds shelves in process memory only. State is NOT preserved
-///   across `ShelfStore` instances (verified by `testInMemoryRoundTripIsNotPersisted`).
+/// - `inMemory`: holds shelves in process memory only. State is not preserved
+///   across `ShelfStore` instances.
 /// - `userDefaults(_:keyPrefix:)`: persists to a `UserDefaults` instance under
 ///   keys derived from `keyPrefix`. Use a real suite (e.g.
 ///   `UserDefaults(suiteName: "dev.rod.shelf")`) in production and a unique

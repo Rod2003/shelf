@@ -6,10 +6,6 @@ import Foundation
 /// dictionary or a `UserDefaults` suite, with the oldest shelf evicted when
 /// the cap is exceeded.
 ///
-/// Metis-directed shape: `ShelfStore` is a single concrete `final class`.
-/// There is NO `ShelfStoring` protocol; storage variation is expressed via
-/// `ShelfStoreBackend` and case-dispatched internally.
-///
 /// ## Recency ordering
 /// `ShelfStore` maintains an explicit ordered list of `ShelfID`s (the "index")
 /// representing recency, where index 0 is most-recently-used. `add(_:)`
@@ -28,15 +24,11 @@ import Foundation
 ///
 /// ## Thread safety
 /// All public methods take an `NSLock` around the underlying state, so
-/// `ShelfStore` may be called from any thread. T15 (ShakeDetector) may invoke
-/// from background threads; T9 (MenuBarController) calls from the main
-/// thread; the lock makes both safe.
+/// `ShelfStore` may be called from any thread.
 ///
 /// ## Observation
 /// `onChange` is a single optional callback invoked after every mutation
 /// (`add`, `remove`, `move`, `update` when something actually changes).
-/// Higher layers wrap this for richer observation; ShelfCore deliberately
-/// does NOT use Combine / `ObservableObject` (per Metis directive).
 public final class ShelfStore: @unchecked Sendable {
     // `@unchecked Sendable`: all mutable state is guarded by the `NSLock`
     // below, so the compiler's stricter Sendable check is replaced with a
@@ -44,8 +36,7 @@ public final class ShelfStore: @unchecked Sendable {
     // before touching `shelves` / `order`, and `onChange` is invoked only
     // after the lock has been released.
 
-    /// Maximum number of shelves retained at once. Hardcoded per Metis
-    /// directive — NOT user-configurable.
+    /// Maximum number of shelves retained at once. Not user-configurable.
     public static let recentCap: Int = 5
 
     /// Invoked after every state-changing mutation. Single optional
@@ -86,7 +77,6 @@ public final class ShelfStore: @unchecked Sendable {
             shelves[shelf.id] = shelf
             order.insert(shelf.id, at: 0)
             persistShelf(shelf)
-            // Evict oldest if past cap.
             while order.count > Self.recentCap {
                 let evicted = order.removeLast()
                 shelves.removeValue(forKey: evicted)

@@ -17,7 +17,7 @@ import CoreGraphics
 /// timestamps. The state machine never reads the current wall clock.
 public struct ShakeHeuristic {
 
-    /// Tunable thresholds. Defaults are derived from T1 Spike A's empirical
+    /// Tunable thresholds. Defaults are derived from Spike A's empirical
     /// findings; see `.sisyphus/spike-A-findings.md` for the rationale.
     public struct Config: Equatable, Sendable {
         /// Minimum |Δx| between consecutive samples to count as a leg.

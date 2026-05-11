@@ -7,7 +7,7 @@ import Foundation
 ///
 /// `originalPath` is retained for diagnostics and debug logging only; the
 /// authoritative way to recover the URL is to resolve `bookmarkData` through
-/// `BookmarkResolver` (T17). Do NOT treat `originalPath` as a substitute for
+/// `BookmarkResolver`. Do not treat `originalPath` as a substitute for
 /// resolving the bookmark.
 ///
 /// ## Privacy
