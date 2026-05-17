@@ -1,0 +1,54 @@
+excluded:
+  - Shelf.xcodeproj
+  - .build
+  - DerivedData
+  - Modules/ShelfCore/.build
+
+disabled_rules:
+  - todo
+  - trailing_comma
+  - line_length
+  # Project consciously keeps a no-op override on ShelfApplication.sendEvent
+  # as a forward-flexibility hook for future drag detection.
+  - unneeded_override
+  # Several helpers (e.g. FilePromiseProviderWithURL, PromiseOutcome) are
+  # intentionally fileprivate to scope them to their owning drag-out file.
+  - private_over_fileprivate
+  # SwiftUI buttons pass both an action closure and a label closure; trailing
+  # closure on the label is idiomatic and reads more naturally.
+  - multiple_closures_with_trailing_closure
+  # Visual column alignment in switch-return tables is intentional.
+  - comma
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - first_where
+  - last_where
+  - sorted_first_last
+  - toggle_bool
+  - redundant_nil_coalescing
+
+identifier_name:
+  min_length:
+    warning: 1
+    error: 0
+  # `_delegate` in main.swift is a deliberate "retain for lifetime" top-level let.
+  allowed_symbols: ["_"]
+
+opening_brace:
+  ignore_multiline_function_signatures: true
+
+# DragOutCell.swift consolidates drag-out machinery (NSFilePromiseProvider
+# subclass, PromiseOutcome lock, item-provider plumbing) in one file by design.
+file_length:
+  warning: 800
+  error: 1200
+
+function_body_length:
+  warning: 100
+  error: 150
+
+type_body_length:
+  warning: 500
+  error: 800

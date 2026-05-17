@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: SwiftLint
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint lint --strict --reporter github-actions-logging
+
+  build:
+    name: Build
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved', '**/Package.swift', 'project.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build Shelf
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme Shelf \
+            -destination 'platform=macOS,arch=arm64' \
+            -configuration Debug \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
