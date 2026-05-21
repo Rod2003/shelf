@@ -1,54 +1,10 @@
-// Shelf — AppKit cell wrapper for true MOVE-on-drag-out semantics.
-//
-// SwiftUI's `.onDrag` modifier returns an `NSItemProvider`, which is great
-// for cross-platform parity but does NOT surface the `NSDragOperation`
-// chosen by the receiver after the drop. Without that callback we can't
-// distinguish:
-//
-//   • Receiver did `.move`  → we should delete the original file
-//   • Receiver did `.copy`  → original stays untouched
-//   • Drop was cancelled    → original stays, item stays in shelf
-//
-// This file replaces the SwiftUI `.onDrag` with an AppKit-driven drag
-// initiated from a custom `NSView` that conforms to `NSDraggingSource` and
-// `NSFilePromiseProviderDelegate`. The `draggingSession(_:endedAt:operation:)`
-// callback gives us the receiver's chosen operation, which `AppCoordinator`
-// uses to decide whether to delete the original.
-//
-// Tap detection: because the wrapper consumes `mouseDown(with:)` to start
-// tracking for a potential drag, SwiftUI gestures inside the hosted cell
-// (e.g., `.onTapGesture`) never fire. Tap-to-select is therefore exposed as
-// the `onTap` callback the wrapper invokes from `mouseUp` when no drag was
-// started. `.onHover` keeps working because hover events go through
-// `NSView.mouseEntered/mouseExited` which we don't intercept.
 import AppKit
 import OSLog
 import ShelfCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Reported back to the App Coordinator when a drag-out gesture ends.
-///
-/// `promiseAttempted` and `promiseSucceeded` together let the coordinator
-/// distinguish the three drag-resolution paths:
-///
-/// 1. **File-promise path** (Finder, some sandboxed apps) — the receiver
-///    reads `kPasteboardTypeFilePromiseContent` from the pasteboard and
-///    AppKit calls back into `writePromiseTo`. We set
-///    `promiseAttempted=true` on entry; `promiseSucceeded=true` after a
-///    completed copy. The MOVE semantic deletion is gated on success.
-/// 2. **`.fileURL` path** (browsers, Slack, web upload zones, anything
-///    that doesn't speak the file-promise protocol) — the receiver reads
-///    the URL directly and copies/uploads on its own. `writePromiseTo` is
-///    never invoked, so `promiseAttempted=false`. We treat the drag as
-///    successful (the bytes have left for the destination) and proceed
-///    with MOVE deletion.
-/// 3. **Cancelled** — `operation == []`. Item stays in shelf.
-///
-/// The coordinator must preserve the original ONLY when
-/// `promiseAttempted && !promiseSucceeded` — the safety net for an
-/// in-flight file-promise write that threw. Other cases delete to honor
-/// Shelf's "drag-out always moves" semantic.
+/// Remove shelf entries only when `promiseAttempted && promiseSucceeded`.
 public struct DragOutResult: Sendable {
     public let itemID: ItemID
     public let operation: NSDragOperation
@@ -68,32 +24,22 @@ public struct DragOutResult: Sendable {
     }
 }
 
-/// `NSFilePromiseProvider` subclass that ALSO writes the resolved
-/// `.fileURL` (`public.file-url`) to the pasteboard.
-///
-/// Without this, only file-promise-aware destinations (Finder, a handful
-/// of native apps) can receive the file. Browsers, chat apps (Slack /
-/// Discord / Messages), and most web upload zones read `.fileURL`
-/// exclusively and ignore promises — drag-out into those destinations
-/// silently does nothing.
-///
-/// The provider still vends the file-promise types via `super`, so when
-/// a destination accepts BOTH types (e.g., Finder), the system picks
-/// whichever it prefers. Empirically, Finder uses the promise (and our
-/// `writePromiseTo` runs); browsers use `.fileURL` (and our promise is
-/// never invoked).
-///
-/// CRITICAL — purely behavioral subclass; no stored Swift properties.
-///
-/// During cross-process drag (shelf → another app), AppKit clones the
-/// pasteboard writer through the Objective-C runtime via
-/// `[[Class alloc] init]`. That path bypasses any Swift-only designated
-/// initializer we'd add, traps with "unimplemented initializer 'init()'",
-/// and crashes the app on every drop. We instead piggyback on the
-/// inherited `userInfo` property (an `NSDictionary` that participates in
-/// the ObjC clone correctly) to carry the file-URL string, and override
-/// only behavior — never state. The configuring call site sets
-/// `fileURLString` inside `userInfo` alongside `kind`/`record`/etc.
+public struct MultiDragOutResult: Sendable {
+    public let outcomes: [PerItem]
+    public let operation: NSDragOperation
+
+    public struct PerItem: Sendable {
+        public let itemID: ItemID
+        public let promiseSucceeded: Bool
+        public let promiseAttempted: Bool
+    }
+
+    public init(outcomes: [PerItem], operation: NSDragOperation) {
+        self.outcomes = outcomes
+        self.operation = operation
+    }
+}
+
 fileprivate final class FilePromiseProviderWithURL: NSFilePromiseProvider {
     override func writableTypes(for pasteboard: NSPasteboard) -> [NSPasteboard.PasteboardType] {
         var types = super.writableTypes(for: pasteboard)
@@ -118,29 +64,11 @@ fileprivate final class FilePromiseProviderWithURL: NSFilePromiseProvider {
     }
 }
 
-/// Thread-safe success flag shared between the off-main `writePromiseTo`
-/// callback and the @MainActor `draggingSession(_:endedAt:operation:)`
-/// callback. The drag-source NSView holds one and resets it at the start
-/// of every drag session.
-///
-/// Also owns the single shared `OperationQueue` returned from
-/// `operationQueue(for:)` — sharing the queue across all promise calls
-/// from a given cell is what lets `endedAt` block on
-/// `waitUntilAllOperationsAreFinished()` to close a race condition
-/// where AppKit fires `endedAt` on the MainActor before the off-main
-/// `writePromiseTo` finishes its copy. Without that wait, the success
-/// flag is read prematurely and `.move` drag-outs leave the original
-/// file in place.
 fileprivate final class PromiseOutcome: @unchecked Sendable {
     private let lock = NSLock()
     private var _succeeded: Bool = false
     private var _attempted: Bool = false
 
-    /// Shared queue for `writePromiseTo` calls within this cell's drag
-    /// session. Returned verbatim from `operationQueue(for:)` so we can
-    /// `waitUntilAllOperationsAreFinished()` on it from `endedAt`.
-    /// `OperationQueue` is documented thread-safe; the `@unchecked
-    /// Sendable` on this wrapper covers it.
     let queue: OperationQueue = {
         let q = OperationQueue()
         q.qualityOfService = .userInitiated
@@ -154,10 +82,6 @@ fileprivate final class PromiseOutcome: @unchecked Sendable {
         _attempted = false
     }
 
-    /// Marked from `writePromiseTo` on entry. Lets `endedAt` distinguish
-    /// "destination invoked the promise but it failed" (preserve original)
-    /// from "destination read `.fileURL` directly and never asked us"
-    /// (delete original — Shelf's MOVE semantic).
     func markAttempted() {
         lock.lock(); _attempted = true; lock.unlock()
     }
@@ -177,14 +101,61 @@ fileprivate final class PromiseOutcome: @unchecked Sendable {
     }
 }
 
-/// SwiftUI wrapper that hosts a cell's content inside an `NSView` capable
-/// of initiating an AppKit drag-out via `NSFilePromiseProvider` and
-/// reporting the chosen `NSDragOperation` back to the App Coordinator.
+fileprivate final class MultiPromiseOutcome: @unchecked Sendable {
+    private let lock = NSLock()
+    private var attempted: Set<String> = []
+    private var succeeded: Set<String> = []
+    private var itemIDs: [String] = []
+
+    let queue: OperationQueue = {
+        let q = OperationQueue()
+        q.qualityOfService = .userInitiated
+        q.maxConcurrentOperationCount = 1
+        return q
+    }()
+
+    func reset(itemIDs newIDs: [ItemID]) {
+        lock.lock()
+        attempted.removeAll()
+        succeeded.removeAll()
+        itemIDs = newIDs.map { $0.rawValue.uuidString }
+        lock.unlock()
+    }
+
+    func markAttempted(_ id: String?) {
+        guard let id else { return }
+        lock.lock(); attempted.insert(id); lock.unlock()
+    }
+
+    func markSucceeded(_ id: String?) {
+        guard let id else { return }
+        lock.lock(); succeeded.insert(id); lock.unlock()
+    }
+
+    func snapshot() -> [MultiDragOutResult.PerItem] {
+        lock.lock()
+        let ids = itemIDs
+        let attempted = attempted
+        let succeeded = succeeded
+        lock.unlock()
+        return ids.compactMap { idString in
+            guard let uuid = UUID(uuidString: idString) else { return nil }
+            return MultiDragOutResult.PerItem(
+                itemID: ItemID(rawValue: uuid),
+                promiseSucceeded: succeeded.contains(idString),
+                promiseAttempted: attempted.contains(idString)
+            )
+        }
+    }
+}
+
 @MainActor
 public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
     let item: ShelfItem
-    let onTap: () -> Void
+    let onTap: (NSEvent.ModifierFlags) -> Void
     let onDragEnded: (DragOutResult) -> Void
+    let multiItemsProvider: (() -> [ShelfItem])?
+    let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     let content: Content
 
     public init(
@@ -193,9 +164,29 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         onDragEnded: @escaping (DragOutResult) -> Void,
         @ViewBuilder content: () -> Content
     ) {
+        self.init(
+            item: item,
+            onTapWithModifiers: { _ in onTap() },
+            onDragEnded: onDragEnded,
+            multiItemsProvider: nil,
+            onMultiDragEnded: nil,
+            content: content
+        )
+    }
+
+    public init(
+        item: ShelfItem,
+        onTapWithModifiers: @escaping (NSEvent.ModifierFlags) -> Void,
+        onDragEnded: @escaping (DragOutResult) -> Void,
+        multiItemsProvider: (() -> [ShelfItem])? = nil,
+        onMultiDragEnded: ((MultiDragOutResult) -> Void)? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.item = item
-        self.onTap = onTap
+        self.onTap = onTapWithModifiers
         self.onDragEnded = onDragEnded
+        self.multiItemsProvider = multiItemsProvider
+        self.onMultiDragEnded = onMultiDragEnded
         self.content = content()
     }
 
@@ -204,6 +195,8 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         view.item = item
         view.onTap = onTap
         view.onDragEnded = onDragEnded
+        view.multiItemsProvider = multiItemsProvider
+        view.onMultiDragEnded = onMultiDragEnded
 
         let hosting = NSHostingView(rootView: content)
         hosting.translatesAutoresizingMaskIntoConstraints = false
@@ -223,62 +216,44 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         nsView.item = item
         nsView.onTap = onTap
         nsView.onDragEnded = onDragEnded
-        // Update the hosted SwiftUI content. We rebound rootView so visual
-        // state (selection tint, hover, thumbnail) refreshes on each render
-        // pass.
+        nsView.multiItemsProvider = multiItemsProvider
+        nsView.onMultiDragEnded = onMultiDragEnded
         if let hosting = nsView.hostingView as? NSHostingView<Content> {
             hosting.rootView = content
         }
     }
 
-    /// Tell SwiftUI how big the cell wants to be so `LazyVGrid` can lay it
-    /// out. Without this, NSViewRepresentable falls back to the wrapper's
-    /// `intrinsicContentSize` (which is `NSView.noIntrinsicMetric` by
-    /// default), and cells collapse to 0×0 inside the grid.
     public func sizeThatFits(
         _ proposal: ProposedViewSize,
         nsView: DragOutCellNSView,
         context: Context
     ) -> CGSize? {
         guard let hosting = nsView.hostingView else { return nil }
-        // `fittingSize` resolves the SwiftUI content's preferred size via
-        // Auto Layout. ShelfItemView has `.frame(width: 96)` so the width
-        // is fixed; height comes from the VStack's intrinsic content.
         return hosting.fittingSize
     }
 }
 
-/// AppKit-side cell view. Manages tap-vs-drag detection on `mouseDown`,
-/// initiates an `NSDraggingSession` with an `NSFilePromiseProvider` payload,
-/// and forwards the receiver's chosen `NSDragOperation` to the coordinator.
 @MainActor
 public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
     private static let dragThreshold: CGFloat = 4.0
 
     var item: ShelfItem!
-    var onTap: (() -> Void)?
+    var onTap: ((NSEvent.ModifierFlags) -> Void)?
     var onDragEnded: ((DragOutResult) -> Void)?
+    var multiItemsProvider: (() -> [ShelfItem])?
+    var onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     weak var hostingView: NSView?
 
-    /// Tracks whether the most recent drag's `writePromiseTo` callback
-    /// actually completed the copy. Read on MainActor in `endedAt`,
-    /// written from the off-main operation queue. `nonisolated` so the
-    /// off-main callback can access it without an actor hop.
     nonisolated fileprivate let promiseOutcome = PromiseOutcome()
+    nonisolated fileprivate let multiPromiseOutcome = MultiPromiseOutcome()
 
     private var dragStartPoint: NSPoint?
     private var dragStartEvent: NSEvent?
     private var didStartDrag: Bool = false
 
-    /// Cell area opts out of `panel.isMovableByWindowBackground`'s window-
-    /// drag, same as `NoWindowDragOverlay`. That overlay is therefore
-    /// redundant once a cell is wrapped in this NSView, but keeping it in
-    /// `ShelfItemView`'s background is harmless (both return `false`).
     public override var mouseDownCanMoveWindow: Bool { false }
 
-    /// Propagate the SwiftUI hosted view's intrinsic content size up so
-    /// SwiftUI can size the cell correctly inside `LazyVGrid`.
     public override var intrinsicContentSize: NSSize {
         guard let hosting = hostingView else { return super.intrinsicContentSize }
         let size = hosting.intrinsicContentSize
@@ -287,8 +262,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         }
         return hosting.fittingSize
     }
-
-    // MARK: Mouse handling — tap vs drag detection
 
     public override func mouseDown(with event: NSEvent) {
         dragStartPoint = event.locationInWindow
@@ -312,30 +285,46 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             dragStartEvent = nil
         }
         if !didStartDrag {
-            onTap?()
+            onTap?(event.modifierFlags)
         }
         didStartDrag = false
     }
 
-    // MARK: Drag initiation
-
     private func startDragSession(with event: NSEvent) {
-        // Reset the per-drag promise outcome before kicking off a new
-        // session — `writePromiseTo` will mark it succeeded if/when it
-        // actually completes the file copy.
+        if let multiItems = multiItemsProvider?(), multiItems.count > 1 {
+            startMultiDragSession(with: multiItems, event: event)
+            return
+        }
         promiseOutcome.reset()
+        multiPromiseOutcome.reset(itemIDs: [])
 
-        let writer = makePasteboardWriter()
+        let writer = makePasteboardWriter(for: item)
         let draggingItem = NSDraggingItem(pasteboardWriter: writer)
-        // Use a snapshot of the cell as the drag preview image. AppKit
-        // otherwise renders an empty rect that confuses receivers about
-        // what's being dragged.
         if let snapshot = snapshotImage() {
             draggingItem.setDraggingFrame(bounds, contents: snapshot)
         } else {
             draggingItem.draggingFrame = bounds
         }
         beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
+
+    private func startMultiDragSession(with items: [ShelfItem], event: NSEvent) {
+        promiseOutcome.reset()
+        multiPromiseOutcome.reset(itemIDs: items.map(\.id))
+        let dragItems = items.enumerated().map { index, item in
+            let writer = makePasteboardWriter(for: item, includeItemID: true)
+            let draggingItem = NSDraggingItem(pasteboardWriter: writer)
+            let offset = CGFloat(index) * 3
+            let frame = bounds.offsetBy(dx: offset, dy: -offset)
+            if index == 0, let snapshot = snapshotImage() {
+                draggingItem.setDraggingFrame(bounds, contents: snapshot)
+            } else {
+                draggingItem.draggingFrame = frame
+            }
+            return draggingItem
+        }
+        let session = beginDraggingSession(with: dragItems, event: event, source: self)
+        session.draggingFormation = .stack
     }
 
     private func snapshotImage() -> NSImage? {
@@ -346,26 +335,11 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return image
     }
 
-    private func makePasteboardWriter() -> NSPasteboardWriting {
+    private func makePasteboardWriter(for item: ShelfItem, includeItemID: Bool = false) -> NSPasteboardWriting {
         switch item.kind {
         case .fileBookmark(let record):
-            // UTI is derived from the item's display name (a filename like
-            // "scan.pdf" set at drag-in from `url.lastPathComponent`) rather
-            // than `record.originalPath` — `originalPath` is now a
-            // diagnostic-only field that round-trips empty after a
-            // persistence cycle, so it cannot be load-bearing here.
             let typeIdentifier = Self.utiForFile(displayName: item.displayName)
-            // Resolve the bookmark NOW so we can put the real file URL
-            // on the pasteboard alongside the file promise. Browsers,
-            // chat apps, and web upload zones read `.fileURL` directly
-            // and never invoke `writePromiseTo`; without this the drag
-            // silently does nothing in those destinations.
-            //
-            // We deliberately don't pair `release(_:)` here — while the app
-            // is unsandboxed, `startAccessingSecurityScopedResource` is a
-            // no-op, so the leaked access is also a no-op. Future sandboxed
-            // builds will need explicit lifetime management tied to the
-            // drag session (release in `endedAt`).
+            // Include `.fileURL` for destinations that ignore file promises.
             let resolvedURL: URL?
             do {
                 let resolution = try BookmarkResolver().resolve(record)
@@ -378,19 +352,14 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             let provider: NSFilePromiseProvider = (resolvedURL != nil)
                 ? FilePromiseProviderWithURL(fileType: typeIdentifier, delegate: self)
                 : NSFilePromiseProvider(fileType: typeIdentifier, delegate: self)
-            // Pack everything the off-main delegate methods need into the
-            // userInfo dict — `BookmarkRecord`, `ItemID`, the display
-            // name, and (when resolved) the absolute file URL string are
-            // all carried here. `userInfo` is the inherited
-            // `NSFilePromiseProvider` property that survives ObjC
-            // cross-process cloning of the writer; see the
-            // `FilePromiseProviderWithURL` doc for why we route the URL
-            // through here instead of via a Swift stored property.
             var info: [String: Any] = [
                 "kind": "fileBookmark",
                 "record": record,
                 "displayName": item.displayName,
             ]
+            if includeItemID {
+                info["itemID"] = item.id.rawValue.uuidString
+            }
             if let url = resolvedURL {
                 info["fileURLString"] = url.absoluteString
             }
@@ -398,11 +367,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             return provider
 
         case .clipboardImage(let filename):
-            // Clipboard images live at a known path under our App
-            // Support tree. Same compatibility argument as
-            // `.fileBookmark`: provide the URL on the pasteboard so
-            // browsers and chat apps can pick it up directly without
-            // needing the file-promise protocol.
             let resolvedURL: URL? = {
                 guard let appSupport = FileManager.default.urls(
                     for: .applicationSupportDirectory,
@@ -422,6 +386,9 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
                 "kind": "clipboardImage",
                 "filename": filename,
             ]
+            if includeItemID {
+                info["itemID"] = item.id.rawValue.uuidString
+            }
             if let url = resolvedURL {
                 info["fileURLString"] = url.absoluteString
             }
@@ -429,8 +396,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             return provider
 
         case .webURL(let url):
-            // Web URLs and text don't need a file promise — they're inline
-            // data the receiver can paste immediately.
             let pbItem = NSPasteboardItem()
             pbItem.setString(url.absoluteString, forType: .URL)
             pbItem.setString(url.absoluteString, forType: .string)
@@ -454,15 +419,10 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return stripped.isEmpty ? name : stripped
     }
 
-    // MARK: NSDraggingSource
-
     public func draggingSession(
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        // Allow the receiver to choose move / copy / generic / link. Finder
-        // defaults to .move for same-volume drops and .copy for cross-volume,
-        // and respects modifier keys (Command = move, Option = copy).
         return [.move, .copy, .generic, .link]
     }
 
@@ -473,32 +433,19 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
     ) {
         guard let item, let onDragEnded else { return }
 
-        // CRITICAL — close the writePromiseTo race.
-        //
-        // `endedAt` fires on the MainActor as soon as AppKit considers
-        // the drag session done (typically right after mouse-up). But
-        // `writePromiseTo` runs on the operation queue we returned from
-        // `operationQueue(for:)`, and AppKit invokes the two paths
-        // concurrently. In testing, `endedAt` fires ~1ms after
-        // `writePromiseTo` enters its closure — but the actual file
-        // copy doesn't finish for another ~3ms. Reading
-        // `promiseOutcome.succeeded` here without waiting yields
-        // `false` even when the copy ultimately succeeds, which makes
-        // the coordinator's data-loss safety net incorrectly preserve
-        // the original on every successful `.move` drag-out.
-        //
-        // Blocking on the shared queue is bounded by the file copy
-        // duration (typically tens of ms; longer for multi-GB media).
-        // The trade-off — cell stays visible in the shelf for the
-        // duration of the copy — is actually preferable UX: the user
-        // sees the cell vanish exactly when the destination receives
-        // the file, not before.
-        //
-        // Skip the wait for cancelled drops (`operation == []`) — there
-        // is no promise to wait on, and we want the cell to clear
-        // immediately so the shelf reflects intent.
+        // Wait for promise writes before reading success flags.
         if !operation.isEmpty {
             promiseOutcome.queue.waitUntilAllOperationsAreFinished()
+            multiPromiseOutcome.queue.waitUntilAllOperationsAreFinished()
+        }
+
+        let multiOutcomes = multiPromiseOutcome.snapshot()
+        if !multiOutcomes.isEmpty, let onMultiDragEnded {
+            Self.log.info(
+                "Multi drag-out ended count=\(multiOutcomes.count, privacy: .public) operation=\(operation.rawValue, privacy: .public)"
+            )
+            onMultiDragEnded(MultiDragOutResult(outcomes: multiOutcomes, operation: operation))
+            return
         }
 
         let succeeded = promiseOutcome.succeeded
@@ -514,13 +461,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         ))
     }
 
-    // MARK: NSFilePromiseProviderDelegate
-    //
-    // These methods are explicitly `nonisolated` because the system invokes
-    // them on the operation queue we return from `operationQueue(for:)`.
-    // They MUST NOT touch any main-actor state of `self`; everything they
-    // need is in `provider.userInfo`.
-
     nonisolated public func filePromiseProvider(
         _ filePromiseProvider: NSFilePromiseProvider,
         fileNameForType fileType: String
@@ -528,13 +468,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         guard let info = filePromiseProvider.userInfo as? [String: Any] else {
             return "Untitled"
         }
-        // CRITICAL: NSFilePromiseProvider's `fileNameForType` expects the
-        // FULL filename INCLUDING the extension. The system uses this
-        // string verbatim to construct the destination URL. Returning
-        // "foo" (no extension) makes the file land at "~/Downloads/foo"
-        // with no extension, which looks like a missing-file bug to the
-        // user. (NSItemProvider's `suggestedName` is the opposite — that
-        // one wants the basename without extension. Different APIs.)
         if let displayName = info["displayName"] as? String, !displayName.isEmpty {
             return displayName
         }
@@ -545,11 +478,10 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
     }
 
     nonisolated public func operationQueue(for filePromiseProvider: NSFilePromiseProvider) -> OperationQueue {
-        // Return the shared per-cell queue so `endedAt` can wait on it
-        // via `waitUntilAllOperationsAreFinished()`. Returning a fresh
-        // queue here would defeat that wait — the queue we'd be waiting
-        // on would always be empty, and writePromiseTo would run on a
-        // different queue entirely.
+        if let info = filePromiseProvider.userInfo as? [String: Any],
+           info["itemID"] is String {
+            return multiPromiseOutcome.queue
+        }
         return promiseOutcome.queue
     }
 
@@ -558,90 +490,104 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         writePromiseTo url: URL,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        // Mark BEFORE any guard returns. `endedAt` reads this to decide
-        // whether the destination chose the file-promise path or the
-        // `.fileURL` direct-read path; an early-failed guard still counts
-        // as "attempted" so the data-loss safety net engages.
-        self.promiseOutcome.markAttempted()
-
+        // Mark before guards so failed promises cannot look like direct `.fileURL` reads.
+        let itemIDString = Self.promiseItemIDString(filePromiseProvider)
+        markPromiseAttempted(itemIDString)
         guard
             let info = filePromiseProvider.userInfo as? [String: Any],
             let kind = info["kind"] as? String
         else {
-            completionHandler(NSError(
-                domain: "dev.rod.shelf.drag",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Promise has no item info"]
-            ))
+            completionHandler(Self.promiseError(code: -1, message: "Promise has no item info"))
             return
         }
 
         switch kind {
         case "fileBookmark":
-            guard let record = info["record"] as? BookmarkRecord else {
-                Self.log.error("writePromiseTo: missing BookmarkRecord in userInfo")
-                completionHandler(NSError(
-                    domain: "dev.rod.shelf.drag",
-                    code: -2,
-                    userInfo: [NSLocalizedDescriptionKey: "Promise missing bookmark record"]
-                ))
-                return
-            }
-            Self.log.info("writePromiseTo: fileBookmark dest=\(url.path, privacy: .public)")
-            let resolver = BookmarkResolver()
-            do {
-                let resolution = try resolver.resolve(record)
-                defer { resolver.release(resolution.url) }
-                Self.log.info("writePromiseTo: resolved source=\(resolution.url.path, privacy: .public)")
-                try FileManager.default.copyItem(at: resolution.url, to: url)
-                Self.log.info("writePromiseTo: copy complete")
-                self.promiseOutcome.markSucceeded()
-                completionHandler(nil)
-            } catch {
-                Self.log.error("writePromiseTo: copy failed: \(String(describing: error), privacy: .public)")
-                completionHandler(error)
-            }
-
+            writeFileBookmarkPromise(info: info, to: url, itemIDString: itemIDString, completionHandler: completionHandler)
         case "clipboardImage":
-            guard let filename = info["filename"] as? String else {
-                completionHandler(NSError(
-                    domain: "dev.rod.shelf.drag",
-                    code: -3,
-                    userInfo: [NSLocalizedDescriptionKey: "Promise missing image filename"]
-                ))
-                return
-            }
-            guard let appSupport = FileManager.default.urls(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first else {
-                completionHandler(NSError(
-                    domain: "dev.rod.shelf.drag",
-                    code: -4,
-                    userInfo: [NSLocalizedDescriptionKey: "Application Support directory unreachable"]
-                ))
-                return
-            }
-            let source = appSupport
-                .appendingPathComponent("Shelf", isDirectory: true)
-                .appendingPathComponent("clipboard-images", isDirectory: true)
-                .appendingPathComponent(filename)
-            Self.log.info("writePromiseTo: clipboardImage source=\(source.path, privacy: .public) dest=\(url.path, privacy: .public)")
-            do {
-                try FileManager.default.copyItem(at: source, to: url)
-                self.promiseOutcome.markSucceeded()
-                completionHandler(nil)
-            } catch {
-                Self.log.error("writePromiseTo: clipboard copy failed: \(String(describing: error), privacy: .public)")
-                completionHandler(error)
-            }
-
+            writeClipboardImagePromise(info: info, to: url, itemIDString: itemIDString, completionHandler: completionHandler)
         default:
-            completionHandler(NSError(
-                domain: "dev.rod.shelf.drag",
-                code: -5,
-                userInfo: [NSLocalizedDescriptionKey: "Unknown promise kind"]
-            ))
+            completionHandler(Self.promiseError(code: -5, message: "Unknown promise kind"))
         }
+    }
+    nonisolated private func writeFileBookmarkPromise(
+        info: [String: Any],
+        to url: URL,
+        itemIDString: String?,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        guard let record = info["record"] as? BookmarkRecord else {
+            Self.log.error("writePromiseTo: missing BookmarkRecord in userInfo")
+            completionHandler(Self.promiseError(code: -2, message: "Promise missing bookmark record"))
+            return
+        }
+
+        Self.log.info("writePromiseTo: fileBookmark dest=\(url.path, privacy: .public)")
+        let resolver = BookmarkResolver()
+        do {
+            let resolution = try resolver.resolve(record)
+            defer { resolver.release(resolution.url) }
+            Self.log.info("writePromiseTo: resolved source=\(resolution.url.path, privacy: .public)")
+            try FileManager.default.copyItem(at: resolution.url, to: url)
+            Self.log.info("writePromiseTo: copy complete")
+            markPromiseSucceeded(itemIDString)
+            completionHandler(nil)
+        } catch {
+            Self.log.error("writePromiseTo: copy failed: \(String(describing: error), privacy: .public)")
+            completionHandler(error)
+        }
+    }
+    nonisolated private func writeClipboardImagePromise(
+        info: [String: Any],
+        to url: URL,
+        itemIDString: String?,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        guard let filename = info["filename"] as? String else {
+            completionHandler(Self.promiseError(code: -3, message: "Promise missing image filename"))
+            return
+        }
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            completionHandler(Self.promiseError(code: -4, message: "Application Support directory unreachable"))
+            return
+        }
+
+        let source = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        Self.log.info("writePromiseTo: clipboardImage source=\(source.path, privacy: .public) dest=\(url.path, privacy: .public)")
+
+        do {
+            try FileManager.default.copyItem(at: source, to: url)
+            markPromiseSucceeded(itemIDString)
+            completionHandler(nil)
+        } catch {
+            Self.log.error("writePromiseTo: clipboard copy failed: \(String(describing: error), privacy: .public)")
+            completionHandler(error)
+        }
+    }
+    nonisolated private func markPromiseAttempted(_ itemIDString: String?) {
+        if let itemIDString {
+            multiPromiseOutcome.markAttempted(itemIDString)
+        } else {
+            promiseOutcome.markAttempted()
+        }
+    }
+
+    nonisolated private func markPromiseSucceeded(_ itemIDString: String?) {
+        if let itemIDString {
+            multiPromiseOutcome.markSucceeded(itemIDString)
+        } else {
+            promiseOutcome.markSucceeded()
+        }
+    }
+
+    nonisolated private static func promiseItemIDString(_ filePromiseProvider: NSFilePromiseProvider) -> String? {
+        (filePromiseProvider.userInfo as? [String: Any])?["itemID"] as? String
+    }
+
+    nonisolated private static func promiseError(code: Int, message: String) -> NSError {
+        NSError(domain: "dev.rod.shelf.drag", code: code, userInfo: [NSLocalizedDescriptionKey: message])
     }
 }

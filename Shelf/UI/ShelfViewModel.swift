@@ -1,62 +1,108 @@
-// UI presentation layer for a single shelf's contents.
-// Bridges ShelfCore value types to SwiftUI via Combine's ObservableObject.
-//
-// This view model is intentionally a thin, optimistic-state container:
-// - It does not call ShelfStore directly. The AppCoordinator owns the
-//   store and pushes updates in via `reload(from:)`.
-// - The mutating helpers (`remove`, `reorder`) produce local optimistic
-//   updates so drag-OUT and shake-evict feel instant; the call site is
-//   responsible for persisting the change.
-
 import Foundation
 import Combine
 import ShelfCore
 
-/// Observable presentation state for one `Shelf`.
-///
-/// Construction is cheap; rebind via `reload(from:)` whenever the
-/// underlying `Shelf` value changes upstream (e.g. from `ShelfStore.onChange`
-/// in the App Coordinator).
 @MainActor
 public final class ShelfViewModel: ObservableObject {
-    public let shelfID: ShelfID
+    public let shelfID: ShelfGroupID
     @Published public var name: String
     @Published public var items: [ShelfItem]
-    /// Currently-selected item, used by the AppCoordinator to drive the
-    /// Quick Look coordinator and by `ShelfItemView` to render its selection
-    /// background. `nil` means no selection. Mutating here is purely a
-    /// presentation-state change; persistence is not involved.
     @Published public var selectedItemID: ItemID?
+    @Published public var isExpanded: Bool
+    @Published public var drawerSelection: Set<ItemID>
+    @Published public var drawerActiveSelectionID: ItemID?
 
-    public init(shelf: Shelf) {
+    public init(shelf: ShelfGroup) {
         self.shelfID = shelf.id
         self.name = shelf.name
         self.items = shelf.items
         self.selectedItemID = nil
+        self.isExpanded = false
+        self.drawerSelection = []
+        self.drawerActiveSelectionID = nil
     }
 
-    /// Reapply state from an updated `Shelf` value. The `shelfID` is fixed at
-    /// init time and is not changed here; callers must build a new view model
-    /// if they want to show a different shelf.
-    public func reload(from shelf: Shelf) {
+    public func reload(from shelf: ShelfGroup) {
         self.name = shelf.name
         self.items = shelf.items
-        // Drop the selection if the upstream value no longer contains it.
         if let sel = selectedItemID, !shelf.items.contains(where: { $0.id == sel }) {
             self.selectedItemID = nil
         }
+        let liveIDs = Set(shelf.items.map(\.id))
+        drawerSelection.formIntersection(liveIDs)
+        if let active = drawerActiveSelectionID, !liveIDs.contains(active) {
+            drawerActiveSelectionID = drawerSelection.first
+        }
     }
 
-    /// Optimistically remove an item from the local list. Persistence via
-    /// `ShelfStore.update(...)` is the call site's responsibility.
     public func remove(itemID: ItemID) {
         items.removeAll { $0.id == itemID }
         if selectedItemID == itemID { selectedItemID = nil }
+        drawerSelection.remove(itemID)
+        if drawerActiveSelectionID == itemID {
+            drawerActiveSelectionID = drawerSelection.first
+        }
     }
 
-    /// Optimistically reorder the items array. Indices follow SwiftUI's
-    /// `onMove(perform:)` convention: `destination` is the index BEFORE the
-    /// move where the item should land, so a forward move adjusts by -1.
+    public func removeAll(itemIDs: Set<ItemID>) {
+        guard !itemIDs.isEmpty else { return }
+        items.removeAll { itemIDs.contains($0.id) }
+        if let selectedItemID, itemIDs.contains(selectedItemID) {
+            self.selectedItemID = nil
+        }
+        drawerSelection.subtract(itemIDs)
+        if let active = drawerActiveSelectionID, itemIDs.contains(active) {
+            drawerActiveSelectionID = drawerSelection.first
+        }
+    }
+
+    public func selectOnly(_ itemID: ItemID) {
+        drawerSelection = [itemID]
+        drawerActiveSelectionID = itemID
+        selectedItemID = itemID
+    }
+
+    public func toggle(_ itemID: ItemID) {
+        if drawerSelection.contains(itemID) {
+            drawerSelection.remove(itemID)
+            if drawerActiveSelectionID == itemID {
+                drawerActiveSelectionID = drawerSelection.first
+            }
+            if selectedItemID == itemID {
+                selectedItemID = drawerActiveSelectionID
+            }
+        } else {
+            drawerSelection.insert(itemID)
+            drawerActiveSelectionID = itemID
+            selectedItemID = itemID
+        }
+    }
+
+    public func extendSelection(to itemID: ItemID) {
+        guard
+            let anchor = drawerActiveSelectionID,
+            let anchorIdx = items.firstIndex(where: { $0.id == anchor }),
+            let targetIdx = items.firstIndex(where: { $0.id == itemID })
+        else {
+            selectOnly(itemID)
+            return
+        }
+        let range = anchorIdx <= targetIdx ? anchorIdx...targetIdx : targetIdx...anchorIdx
+        drawerSelection = Set(items[range].map(\.id))
+        drawerActiveSelectionID = itemID
+        selectedItemID = itemID
+    }
+
+    public var quickLookTargetItem: ShelfItem? {
+        let targetID: ItemID?
+        if isExpanded {
+            targetID = drawerActiveSelectionID ?? drawerSelection.first
+        } else {
+            targetID = selectedItemID
+        }
+        return targetID.flatMap { id in items.first(where: { $0.id == id }) } ?? items.first
+    }
+
     public func reorder(from source: Int, to destination: Int) {
         guard items.indices.contains(source), destination >= 0, destination <= items.count else { return }
         let item = items.remove(at: source)

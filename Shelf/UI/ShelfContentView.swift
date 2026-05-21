@@ -1,70 +1,76 @@
-// Top-level SwiftUI content for one shelf panel.
-//
-// Layout:
-//   ┌──────────────────────────────────┐
-//   │  [drag region]               [×] │  invisible 28pt drag strip
-//   │                                  │
-//   │   [ ] [ ] [ ] [ ] [ ]            │  grid (or empty state)
-//   │                                  │
-//   └──────────────────────────────────┘
-//
-// Drag-IN registration lives on the AppKit wrapper NSView produced by
-// `ContentViewFactory`. Drag-OUT lives on the cell. This view is
-// presentation-only; tap selection updates `viewModel.selectedItemID`
-// which the AppCoordinator reads to drive `QuickLookCoordinator`.
-
 import SwiftUI
 import ShelfCore
 
-/// Root SwiftUI content for one shelf. Driven by a `ShelfViewModel`.
 public struct ShelfContentView: View {
+    private static let collapsedPanelSize = CGSize(width: 180, height: 180)
+    private static let expandedPanelSize = CGSize(width: 280, height: 360)
+
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
-    let onDragEnded: ((DragOutResult) -> Void)?
+    let onSingleDragEnded: ((DragOutResult) -> Void)?
+    let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
+    let onDeleteItems: ((Set<ItemID>) -> Void)?
+    let onCollapseRequested: (() -> Void)?
     let onClose: (() -> Void)?
 
     @State private var isCloseHovering: Bool = false
+    @State private var isCollapseHovering: Bool = false
 
     public init(
         viewModel: ShelfViewModel,
         resolver: BookmarkResolver? = nil,
         thumbnailService: ThumbnailService? = nil,
-        onDragEnded: ((DragOutResult) -> Void)? = nil,
+        onSingleDragEnded: ((DragOutResult) -> Void)? = nil,
+        onMultiDragEnded: ((MultiDragOutResult) -> Void)? = nil,
+        onDeleteItems: ((Set<ItemID>) -> Void)? = nil,
+        onCollapseRequested: (() -> Void)? = nil,
         onClose: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.resolver = resolver
         self.thumbnailService = thumbnailService
-        self.onDragEnded = onDragEnded
+        self.onSingleDragEnded = onSingleDragEnded
+        self.onMultiDragEnded = onMultiDragEnded
+        self.onDeleteItems = onDeleteItems
+        self.onCollapseRequested = onCollapseRequested
         self.onClose = onClose
     }
 
     public var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Content. Empty state fills the whole panel so its icon + text
-            // are vertically centered within the visible bounds. The grid
-            // gets a 24pt top inset so cells don't slide under the close
-            // button; that inset only applies when there's actually a grid
-            // to show (no dead space when the shelf is empty).
             if viewModel.items.isEmpty {
                 emptyState
+            } else if viewModel.isExpanded {
+                expandedContent
+                    .padding(.top, 36)
             } else {
-                grid
-                    .padding(.top, 36)  // clears 6pt + 30pt close button
+                StackedShelfView(
+                    viewModel: viewModel,
+                    resolver: resolver,
+                    thumbnailService: thumbnailService,
+                    onSingleDragEnded: onSingleDragEnded,
+                    onMultiDragEnded: onMultiDragEnded
+                )
+                    .padding(.top, 36)
             }
 
-            // Close button anchored in the top-right corner with a small
-            // breathing inset so it sits inside the panel's rounded edge
-            // rather than tangent to it.
             closeButton
                 .padding(.top, 6)
                 .padding(.trailing, 6)
-        }
-        .frame(minWidth: 180, minHeight: 180)
-    }
 
-    // MARK: Close button
+            if viewModel.isExpanded {
+                collapseButton
+                    .padding(.top, 6)
+                    .padding(.leading, 6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+        }
+        .frame(
+            minWidth: viewModel.isExpanded ? Self.expandedPanelSize.width : Self.collapsedPanelSize.width,
+            minHeight: viewModel.isExpanded ? Self.expandedPanelSize.height : Self.collapsedPanelSize.height
+        )
+    }
 
     private var closeButton: some View {
         Button(action: { onClose?() }) {
@@ -76,20 +82,34 @@ public struct ShelfContentView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help("Close Shelf")  // i18n: "Close Shelf"
+        .help("Close Shelf")
         .onHover { hovering in
             isCloseHovering = hovering
         }
     }
 
-    // MARK: Empty state
+    private var collapseButton: some View {
+        Button(action: { onCollapseRequested?() }) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isCollapseHovering ? .primary : .secondary)
+                .frame(width: 30, height: 30)
+                .modifier(GlassCircleBackground())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help("Collapse Shelf")
+        .onHover { hovering in
+            isCollapseHovering = hovering
+        }
+    }
 
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "tray.and.arrow.down")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.tertiary)
-            Text("Drop files here")  // i18n: "Drop files here"
+            Text("Drop files here")
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
@@ -97,50 +117,363 @@ public struct ShelfContentView: View {
         .padding()
     }
 
-    // MARK: Grid
+    private var expandedContent: some View {
+        ShelfDrawerView(
+            viewModel: viewModel,
+            resolver: resolver,
+            thumbnailService: thumbnailService,
+            onSingleDragEnded: onSingleDragEnded,
+            onMultiDragEnded: onMultiDragEnded,
+            onDeleteItems: onDeleteItems,
+            onCollapseRequested: onCollapseRequested
+        )
+    }
+}
 
-    private var grid: some View {
-        ScrollView {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 96, maximum: 120), spacing: 8)],
-                spacing: 8
-            ) {
-                ForEach(viewModel.items, id: \.id) { item in
-                    DragOutCellWrapper(
-                        item: item,
-                        onTap: {
-                            viewModel.selectedItemID = item.id
-                        },
-                        onDragEnded: { result in
-                            onDragEnded?(result)
-                        }
-                    ) {
-                        ShelfItemView(
-                            item: item,
-                            isSelected: viewModel.selectedItemID == item.id,
-                            resolver: resolver,
-                            thumbnailService: thumbnailService
-                        )
-                    }
+private struct StackedShelfView: View {
+    @ObservedObject var viewModel: ShelfViewModel
+    let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
+    let onSingleDragEnded: ((DragOutResult) -> Void)?
+    let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
+
+    private var pillLabel: String {
+        if viewModel.items.count == 1 { return viewModel.items[0].displayName }
+        return "\(viewModel.items.count) attachments"
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if let top = viewModel.items.first {
+                DragOutCellWrapper(
+                    item: top,
+                    onTapWithModifiers: { _ in },
+                    onDragEnded: { onSingleDragEnded?($0) },
+                    multiItemsProvider: { viewModel.items },
+                    onMultiDragEnded: { onMultiDragEnded?($0) }
+                ) {
+                    StackCardsView(
+                        items: viewModel.items,
+                        resolver: resolver,
+                        thumbnailService: thumbnailService
+                    )
                 }
             }
-            .padding(8)
+            if !viewModel.isExpanded {
+                ShelfPill(
+                    label: pillLabel,
+                    onToggle: {
+                        viewModel.isExpanded = true
+                    }
+                )
+                .padding(.horizontal, 14)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+}
+
+private struct StackCardsView: View {
+    let items: [ShelfItem]
+    let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
+
+    var body: some View {
+        ZStack {
+            if items.count >= 3 {
+                BlankStackCard()
+                    .rotationEffect(.degrees(5))
+                    .offset(x: 4, y: 4)
+            }
+            if items.count >= 2 {
+                BlankStackCard()
+                    .rotationEffect(.degrees(-5))
+                    .offset(x: -2, y: 2)
+            }
+            if let top = items.first {
+                TopStackCard(item: top, resolver: resolver, thumbnailService: thumbnailService)
+            }
+        }
+        .frame(width: 96, height: 96)
+    }
+}
+
+private struct BlankStackCard: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(.separator.opacity(0.45), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.14), radius: 3, x: 0, y: 1)
+            .frame(width: 84, height: 84)
+    }
+}
+
+private struct TopStackCard: View {
+    let item: ShelfItem
+    let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
+    @State private var thumbnail: NSImage?
+    private let maxImageSize = CGSize(width: 84, height: 84)
+
+    var body: some View {
+        ZStack {
+            if let thumbnail, let fittedSize = fittedSize(for: thumbnail.size) {
+                Image(nsImage: thumbnail)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(2)
+                    .frame(width: fittedSize.width, height: fittedSize.height)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .strokeBorder(.separator.opacity(0.55), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
+            } else {
+                placeholder
+                    .frame(width: maxImageSize.width, height: maxImageSize.height)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(.separator.opacity(0.55), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
+            }
+        }
+            .frame(width: maxImageSize.width, height: maxImageSize.height)
+            .help(item.displayName)
+            .task(id: item.id) {
+                await loadThumbnailIfNeeded()
+            }
+    }
+
+    @ViewBuilder
+    private var placeholder: some View {
+        switch item.kind {
+        case .fileBookmark, .clipboardImage:
+            Image(systemName: "doc.fill")
+                .font(.system(size: 42))
+                .foregroundStyle(.secondary)
+        case .webURL:
+            Image(systemName: "link")
+                .font(.system(size: 42))
+                .foregroundStyle(.blue)
+        case .text:
+            Image(systemName: "text.alignleft")
+                .font(.system(size: 42))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func fittedSize(for sourceSize: CGSize) -> CGSize? {
+        guard sourceSize.width > 0, sourceSize.height > 0 else { return nil }
+        let scale = min(maxImageSize.width / sourceSize.width, maxImageSize.height / sourceSize.height)
+        return CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+    }
+
+    private func loadThumbnailIfNeeded() async {
+        guard
+            case .fileBookmark(let record) = item.kind,
+            let resolver,
+            let thumbnailService
+        else { return }
+        do {
+            let resolution = try resolver.resolve(record)
+            let image = await thumbnailService.thumbnail(for: resolution.url)
+            resolver.release(resolution.url)
+            thumbnail = image
+        } catch {
+            thumbnail = nil
         }
     }
 }
 
-/// Liquid Glass capsule background for the shelf's close button.
-///
-/// On macOS 26 Tahoe we use the native `.glassEffect()` API with a slight
-/// adaptive tint plus a hairline stroke. The default `Glass.regular` reads
-/// almost invisibly when stacked on top of the panel's own HUD-glass
-/// background; the small `.primary`-opacity tint and the rim stroke give
-/// the button enough density to register as a distinct element while
-/// keeping the Liquid Glass refraction.
-///
-/// On older systems we fall back to `.regularMaterial`, which auto-renders
-/// as Liquid Glass on macOS 26 anyway but doesn't give us access to the
-/// `Glass` configurator (tint, interactive variant, etc.).
+private struct ShelfPill: View {
+    let label: String
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 6) {
+                MarqueeText(label)
+                    .frame(maxWidth: .infinity)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(.separator.opacity(0.45), lineWidth: 0.5))
+        }
+        .frame(maxWidth: .infinity)
+        .buttonStyle(.plain)
+        .help(label)
+    }
+}
+
+private struct MarqueeText: View {
+    private let spacing: CGFloat = 28
+    let text: String
+    @State private var textWidth: CGFloat = 0
+    @State private var containerWidth: CGFloat = 0
+    @State private var isAnimating = false
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let shouldScroll = textWidth > proxy.size.width
+            Group {
+                if shouldScroll {
+                    HStack(spacing: spacing) {
+                        measuredText
+                        measuredText
+                    }
+                    .offset(x: isAnimating ? -(textWidth + spacing) : 0)
+                    .animation(
+                        .linear(duration: max(4, Double(textWidth + spacing) / 24))
+                            .repeatForever(autoreverses: false),
+                        value: isAnimating
+                    )
+                } else {
+                    measuredText
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
+            .clipped()
+            .onAppear {
+                containerWidth = proxy.size.width
+                isAnimating = shouldScroll
+            }
+            .onChange(of: proxy.size.width) { _, width in
+                containerWidth = width
+                isAnimating = textWidth > width
+            }
+            .onChange(of: textWidth) { _, width in
+                isAnimating = width > containerWidth
+            }
+        }
+        .frame(height: 16)
+    }
+
+    private var measuredText: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .medium))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: MarqueeTextWidthKey.self, value: proxy.size.width)
+                }
+            )
+            .onPreferenceChange(MarqueeTextWidthKey.self) { width in
+                textWidth = width
+            }
+    }
+}
+
+private struct MarqueeTextWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct ShelfDrawerView: View {
+    @ObservedObject var viewModel: ShelfViewModel
+    let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
+    let onSingleDragEnded: ((DragOutResult) -> Void)?
+    let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
+    let onDeleteItems: ((Set<ItemID>) -> Void)?
+    let onCollapseRequested: (() -> Void)?
+    @FocusState private var isFocused: Bool
+
+    private let columns = [
+        GridItem(.flexible(minimum: 96, maximum: 120), spacing: 8),
+        GridItem(.flexible(minimum: 96, maximum: 120), spacing: 8),
+    ]
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(viewModel.items, id: \.id) { item in
+                    DragOutCellWrapper(
+                        item: item,
+                        onTapWithModifiers: { modifiers in
+                            handleClick(itemID: item.id, modifiers: modifiers)
+                        },
+                        onDragEnded: { onSingleDragEnded?($0) },
+                        multiItemsProvider: {
+                            if viewModel.drawerSelection.contains(item.id) {
+                                return viewModel.items.filter { viewModel.drawerSelection.contains($0.id) }
+                            }
+                            viewModel.selectOnly(item.id)
+                            return [item]
+                        },
+                        onMultiDragEnded: { onMultiDragEnded?($0) }
+                    ) {
+                        ShelfItemView(
+                            item: item,
+                            isSelected: viewModel.drawerSelection.contains(item.id),
+                            resolver: resolver,
+                            thumbnailService: thumbnailService
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(
+                                    viewModel.drawerActiveSelectionID == item.id
+                                        ? Color.accentColor
+                                        : Color.accentColor.opacity(0.55),
+                                    lineWidth: viewModel.drawerSelection.contains(item.id) ? 2 : 0
+                                )
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 12)
+        }
+        .focusable(true)
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+        .onChange(of: viewModel.isExpanded) { _, expanded in
+            isFocused = expanded
+        }
+        .onKeyPress(.delete) {
+            guard !viewModel.drawerSelection.isEmpty else { return .handled }
+            let selection = viewModel.drawerSelection
+            viewModel.removeAll(itemIDs: selection)
+            if viewModel.items.isEmpty {
+                viewModel.isExpanded = false
+            }
+            onDeleteItems?(selection)
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            onCollapseRequested?()
+            return .handled
+        }
+    }
+
+    private func handleClick(itemID: ItemID, modifiers: NSEvent.ModifierFlags) {
+        if modifiers.contains(.shift) {
+            viewModel.extendSelection(to: itemID)
+        } else if modifiers.contains(.command) {
+            viewModel.toggle(itemID)
+        } else {
+            viewModel.selectOnly(itemID)
+        }
+    }
+}
+
 private struct GlassCircleBackground: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {

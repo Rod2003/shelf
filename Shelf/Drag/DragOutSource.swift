@@ -1,39 +1,9 @@
-// Drag-OUT source.
-//
-// `DragOutSource` is the `NSDraggingSource` implementation handed to
-// `NSView.beginDraggingSession(...)` to initiate a drag from the shelf onto
-// another app, Finder, or the desktop.
-//
-// Responsibilities:
-//   • Build the right pasteboard writer for a `ShelfItem`:
-//     - `.fileBookmark`     → `NSFilePromiseProvider` (lazy file copy via `FilePromiseDelegate`)
-//     - `.clipboardImage`   → `NSFilePromiseProvider` (image lives in App Support; promise resolves it)
-//     - `.webURL`           → `NSPasteboardItem` with `.URL` + `.string`
-//     - `.text`             → `NSPasteboardItem` with `.string`
-//   • Vend the standard `NSDraggingSource` operation mask. macOS handles
-//     copy/move via the system modifier-driven mask.
-//
-// Lifecycle:
-//   • `DragOutSource` and `FilePromiseDelegate` are created once per
-//     ShelfWindowController (or once globally — both work). The same
-//     instance can serve many drags.
-//   • Each drag registers its `ShelfItem` snapshot in
-//     `FilePromiseDelegate.pendingItems` keyed by the item's UUID; the
-//     `NSFilePromiseProvider.userInfo["itemID"]` carries the lookup key
-//     across into AppKit's drag machinery.
-
 import AppKit
 import Foundation
 import OSLog
 import ShelfCore
 import UniformTypeIdentifiers
 
-/// `NSDraggingSource` that builds pasteboard writers for ShelfItems.
-///
-/// Files (and clipboard-image items) are vended as lazy
-/// `NSFilePromiseProvider`s; web URLs and plain text are vended as
-/// `NSPasteboardItem` so they don't pay the file-promise dance just to drop
-/// a string somewhere.
 @MainActor
 public final class DragOutSource: NSObject, NSDraggingSource {
 
@@ -45,33 +15,10 @@ public final class DragOutSource: NSObject, NSDraggingSource {
         super.init()
     }
 
-    /// Convenience initializer that creates a fresh `FilePromiseDelegate`
-    /// (with a default `BookmarkResolver`) — useful for ad-hoc construction
-    /// at NSView wrapper points where the caller doesn't already own a
-    /// delegate. Tests may pass their own delegate via
-    /// `init(promiseDelegate:)` for instrumentation.
     public override convenience init() {
         self.init(promiseDelegate: FilePromiseDelegate())
     }
 
-    /// Build the pasteboard-writing object for a single `ShelfItem`.
-    ///
-    /// For file-style items (`.fileBookmark`, `.clipboardImage`) returns an
-    /// `NSFilePromiseProvider` with this source's `FilePromiseDelegate` and
-    /// registers the item snapshot in
-    /// `FilePromiseDelegate.pendingItems` so the on-demand write can find it.
-    ///
-    /// For web URL items returns an `NSPasteboardItem` advertising both
-    /// `.URL` and `.string` (so Safari, TextEdit, etc. each find a flavor
-    /// they understand).
-    ///
-    /// For plain-text items returns an `NSPasteboardItem` advertising
-    /// `.string` only.
-    ///
-    /// Returns `nil` only if the item kind is unrecognized — currently
-    /// unreachable because `ShelfItemKind` is an exhaustively-matched
-    /// `enum`, but the optional return is preserved for forward
-    /// compatibility (e.g. a future `.richText` kind).
     public func makePasteboardWriter(for item: ShelfItem) -> NSPasteboardWriting? {
         switch item.kind {
         case .fileBookmark, .clipboardImage:
@@ -98,17 +45,10 @@ public final class DragOutSource: NSObject, NSDraggingSource {
         }
     }
 
-    /// Best-effort UTI for the given item. For `.fileBookmark` we try the
-    /// path extension via `UTType(filenameExtension:)` and fall back to
-    /// `public.data` when the extension is missing or unmappable. For
-    /// `.clipboardImage` we declare PNG (the canonical format `DragItemFactory`
-    /// writes for clipboard images).
     private func uti(for item: ShelfItem) -> String? {
         switch item.kind {
         case .fileBookmark:
-            // Extension is read from `item.displayName` (e.g. "scan.pdf")
-            // because `BookmarkRecord.originalPath` is a diagnostic-only
-            // field that does not survive a persistence round-trip.
+            // Use `displayName`; `originalPath` does not survive persistence.
             let ext = (item.displayName as NSString).pathExtension
             if ext.isEmpty { return UTType.data.identifier }
             return UTType(filenameExtension: ext)?.identifier ?? UTType.data.identifier
@@ -119,13 +59,6 @@ public final class DragOutSource: NSObject, NSDraggingSource {
         }
     }
 
-    // MARK: NSDraggingSource
-
-    /// Operation mask for the dragging session. Outside the app we vend
-    /// `[.copy, .generic]` (e.g. dragging into Finder copies the file by
-    /// default; Option-drag promotes to move). Inside the app we additionally
-    /// allow `.move` so a future "rearrange items" gesture can hook here
-    /// without changing this surface.
     public func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         switch context {
         case .outsideApplication:
@@ -137,9 +70,6 @@ public final class DragOutSource: NSObject, NSDraggingSource {
         }
     }
 
-    /// Logged for diagnostics. We do NOT alter ShelfStore here on
-    /// successful drag-out — the spec explicitly notes that drag-out
-    /// preserves the source item (no implicit removal).
     public func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         log.info("Drag-out session ended op=\(operation.rawValue, privacy: .public) at=(\(screenPoint.x, privacy: .public),\(screenPoint.y, privacy: .public))")
     }
