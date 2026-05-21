@@ -1,20 +1,3 @@
-// Visual regression tests for ShelfContentView.
-//
-// We host the SwiftUI view inside an `NSHostingView` and ask
-// swift-snapshot-testing to capture a PNG against a fixed frame, in both
-// light and dark color schemes. The first run will fail with "no
-// reference image" errors and write the references under
-// `ShelfTests/Snapshots/__Snapshots__/` — those PNGs are the committed
-// baseline. Subsequent runs compare the rendered hosting view against
-// the stored references.
-//
-// Notes:
-//   • Thumbnail loading is intentionally NOT exercised — we don't pass
-//     a `BookmarkResolver` or `ThumbnailService`, so file items render
-//     the SF Symbol placeholder. That keeps these snapshots
-//     deterministic and free of file-system / Quick Look variability.
-//   • Setting `recordSnapshots = true` forces re-recording even when
-//     references already exist; flip back to `false` before committing.
 import XCTest
 import SwiftUI
 import AppKit
@@ -24,27 +7,20 @@ import ShelfCore
 
 @MainActor
 final class ShelfContentViewSnapshotTests: XCTestCase {
-
-    /// Set to true to forcibly regenerate references; commit them and
-    /// switch back to false. Leaving this false also works for the
-    /// initial recording — the library writes references on first miss.
     private let recordSnapshots = false
 
-    private static let snapshotSize = CGSize(width: 360, height: 320)
+    private static let collapsedSnapshotSize = CGSize(width: 360, height: 320)
+    private static let expandedSnapshotSize = CGSize(width: 520, height: 320)
 
-    // MARK: - Fixture helpers
-
-    private func makeShelf(items: [ShelfItem] = [], name: String = "") -> Shelf {
-        Shelf(name: name, items: items)
+    private func makeShelf(items: [ShelfItem] = [], name: String = "") -> ShelfGroup {
+        ShelfGroup(name: name, items: items)
     }
 
-    private func makeViewModel(_ shelf: Shelf) -> ShelfViewModel {
+    private func makeViewModel(_ shelf: ShelfGroup) -> ShelfViewModel {
         ShelfViewModel(shelf: shelf)
     }
 
     private func sampleFileBookmarkItem(name: String = "report.pdf") -> ShelfItem {
-        // Stable id + createdAt so the rendered cell label is identical
-        // run-over-run; only `displayName` reaches the screen.
         let dummyData = Data(repeating: 0, count: 16)
         let record = BookmarkRecord(
             bookmarkData: dummyData,
@@ -73,14 +49,11 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
             createdAt: Date(timeIntervalSince1970: 0)
         )
     }
-
-    /// Render the view in an NSHostingView at a fixed size and snapshot.
-    /// `colorScheme` is forced via the SwiftUI environment so a single
-    /// test machine produces both light- and dark-mode references.
     private func snapshot(
         _ view: some View,
         named name: String,
         scheme: ColorScheme,
+        size: CGSize = collapsedSnapshotSize,
         file: StaticString = #file,
         testName: String = #function,
         line: UInt = #line
@@ -93,13 +66,13 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
             view.environment(\.colorScheme, scheme)
         )
         host.appearance = appearance
-        host.frame = CGRect(origin: .zero, size: Self.snapshotSize)
+        host.frame = CGRect(origin: .zero, size: size)
         host.layoutSubtreeIfNeeded()
 
         if recordSnapshots {
             assertSnapshot(
                 of: host,
-                as: .image(size: Self.snapshotSize),
+                as: .image(size: size),
                 named: name,
                 record: true,
                 file: file,
@@ -109,7 +82,7 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
         } else {
             assertSnapshot(
                 of: host,
-                as: .image(size: Self.snapshotSize),
+                as: .image(size: size),
                 named: name,
                 file: file,
                 testName: testName,
@@ -117,8 +90,6 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
             )
         }
     }
-
-    // MARK: - Empty state
 
     func testEmptyShelfLight() {
         let vm = makeViewModel(makeShelf())
@@ -130,7 +101,16 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
         snapshot(ShelfContentView(viewModel: vm), named: "empty", scheme: .dark)
     }
 
-    // MARK: - Three mixed items
+    func testOneItemLight() {
+        let vm = makeViewModel(makeShelf(items: [sampleFileBookmarkItem(name: "report.pdf")]))
+        snapshot(ShelfContentView(viewModel: vm), named: "one-item", scheme: .light)
+    }
+
+    func testTwoItemsLight() {
+        let items = [sampleFileBookmarkItem(name: "a.png"), sampleFileBookmarkItem(name: "b.png")]
+        let vm = makeViewModel(makeShelf(items: items))
+        snapshot(ShelfContentView(viewModel: vm), named: "two-items", scheme: .light)
+    }
 
     func testThreeItemsLight() {
         let items = [sampleFileBookmarkItem(), sampleWebURLItem(), sampleTextItem()]
@@ -144,8 +124,6 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
         snapshot(ShelfContentView(viewModel: vm), named: "three-items", scheme: .dark)
     }
 
-    // MARK: - Many items (grid wraps)
-
     func testManyItemsLight() {
         let items = (1...12).map { sampleFileBookmarkItem(name: "doc\($0).pdf") }
         let vm = makeViewModel(makeShelf(items: items, name: "Many"))
@@ -158,15 +136,99 @@ final class ShelfContentViewSnapshotTests: XCTestCase {
         snapshot(ShelfContentView(viewModel: vm), named: "many-items", scheme: .dark)
     }
 
-    // MARK: - Named shelf header
-
-    func testNamedShelfHeaderLight() {
-        let vm = makeViewModel(makeShelf(items: [sampleTextItem()], name: "Project Notes"))
-        snapshot(ShelfContentView(viewModel: vm), named: "named-shelf", scheme: .light)
+    func testLongFilenameLight() {
+        let vm = makeViewModel(makeShelf(items: [
+            sampleFileBookmarkItem(name: "Extremely long project archive filename.pdf"),
+        ]))
+        snapshot(ShelfContentView(viewModel: vm), named: "long-filename", scheme: .light)
     }
 
-    func testNamedShelfHeaderDark() {
-        let vm = makeViewModel(makeShelf(items: [sampleTextItem()], name: "Project Notes"))
-        snapshot(ShelfContentView(viewModel: vm), named: "named-shelf", scheme: .dark)
+    func testLongFilenameDark() {
+        let vm = makeViewModel(makeShelf(items: [
+            sampleFileBookmarkItem(name: "Extremely long project archive filename.pdf"),
+        ]))
+        snapshot(ShelfContentView(viewModel: vm), named: "long-filename", scheme: .dark)
+    }
+
+    func testExpandedOneItemLight() {
+        let vm = makeViewModel(makeShelf(items: [sampleFileBookmarkItem(name: "report.pdf")]))
+        vm.isExpanded = true
+        vm.selectOnly(vm.items[0].id)
+        snapshot(
+            ShelfContentView(viewModel: vm),
+            named: "expanded-one-item",
+            scheme: .light,
+            size: Self.expandedSnapshotSize
+        )
+    }
+
+    func testExpandedManyItemsDark() {
+        let items = (1...8).map { sampleFileBookmarkItem(name: "doc\($0).pdf") }
+        let vm = makeViewModel(makeShelf(items: items))
+        vm.isExpanded = true
+        vm.selectOnly(items[1].id)
+        snapshot(
+            ShelfContentView(viewModel: vm),
+            named: "expanded-many-items",
+            scheme: .dark,
+            size: Self.expandedSnapshotSize
+        )
+    }
+}
+
+@MainActor
+final class ShelfViewModelSelectionTests: XCTestCase {
+    private func item(_ name: String) -> ShelfItem {
+        ShelfItem(kind: .text(name), displayName: name, createdAt: Date(timeIntervalSince1970: 0))
+    }
+
+    private func makeViewModel() -> ShelfViewModel {
+        ShelfViewModel(shelf: ShelfGroup(items: [item("a"), item("b"), item("c"), item("d")]))
+    }
+
+    func testSelectOnlySetsDrawerAndQuickLookTarget() {
+        let vm = makeViewModel()
+        vm.isExpanded = true
+
+        vm.selectOnly(vm.items[1].id)
+
+        XCTAssertEqual(vm.drawerSelection, [vm.items[1].id])
+        XCTAssertEqual(vm.drawerActiveSelectionID, vm.items[1].id)
+        XCTAssertEqual(vm.quickLookTargetItem?.id, vm.items[1].id)
+    }
+
+    func testCommandToggleRemovesActiveSelection() {
+        let vm = makeViewModel()
+        vm.selectOnly(vm.items[0].id)
+        vm.toggle(vm.items[1].id)
+        XCTAssertEqual(vm.drawerSelection, [vm.items[0].id, vm.items[1].id])
+
+        vm.toggle(vm.items[1].id)
+
+        XCTAssertEqual(vm.drawerSelection, [vm.items[0].id])
+        XCTAssertNotEqual(vm.drawerActiveSelectionID, vm.items[1].id)
+    }
+
+    func testShiftClickExtendsContiguousRange() {
+        let vm = makeViewModel()
+        vm.selectOnly(vm.items[0].id)
+
+        vm.extendSelection(to: vm.items[2].id)
+
+        XCTAssertEqual(vm.drawerSelection, [vm.items[0].id, vm.items[1].id, vm.items[2].id])
+        XCTAssertEqual(vm.drawerActiveSelectionID, vm.items[2].id)
+    }
+
+    func testReloadReconcilesDeletedSelection() {
+        let vm = makeViewModel()
+        vm.selectOnly(vm.items[2].id)
+        let surviving = [vm.items[0], vm.items[1]]
+        let updated = ShelfGroup(id: vm.shelfID, items: surviving)
+
+        vm.reload(from: updated)
+
+        XCTAssertEqual(vm.items.map(\.id), surviving.map(\.id))
+        XCTAssertFalse(vm.drawerSelection.contains(where: { !surviving.map(\.id).contains($0) }))
+        XCTAssertNil(vm.drawerActiveSelectionID)
     }
 }

@@ -3,8 +3,6 @@ import XCTest
 
 final class ShelfItemTests: XCTestCase {
 
-    // MARK: - Helpers
-
     private func makeBookmark() -> BookmarkRecord {
         BookmarkRecord(
             bookmarkData: Data([0x01, 0x02, 0x03, 0x04]),
@@ -12,8 +10,6 @@ final class ShelfItemTests: XCTestCase {
             createdAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
     }
-
-    // MARK: - Init for each kind
 
     func testInitForFileBookmarkKind() {
         let bookmark = makeBookmark()
@@ -56,8 +52,6 @@ final class ShelfItemTests: XCTestCase {
             XCTFail("Expected .clipboardImage kind")
         }
     }
-
-    // MARK: - Codable round-trip per kind
 
     func testCodableRoundTripForFileBookmarkKind() throws {
         let bookmark = makeBookmark()
@@ -108,8 +102,6 @@ final class ShelfItemTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ShelfItem.self, from: data)
         XCTAssertEqual(decoded, original)
     }
-
-    // MARK: - Equality semantics
 
     func testEquatabilityRequiresSamePayload() {
         let id = ItemID(rawValue: UUID())

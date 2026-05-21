@@ -16,6 +16,7 @@ Package.resolved
 
 # Sisyphus planning artifacts (local-only, not shipped)
 .sisyphus/
+docs/
 
 # IDEs
 *.swiftpm/

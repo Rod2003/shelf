@@ -7,13 +7,8 @@ final class BookmarkRecordTests: XCTestCase {
         let record = BookmarkRecord(bookmarkData: Data(), originalPath: "")
         XCTAssertEqual(record.bookmarkData, Data())
         XCTAssertEqual(record.originalPath, "")
-        // createdAt is non-nil by virtue of Date type.
         XCTAssertLessThanOrEqual(record.createdAt.timeIntervalSinceNow, 1.0)
     }
-
-    /// `bookmarkData` and `createdAt` must round-trip byte-equal; the
-    /// diagnostic `originalPath` field is deliberately redacted on encode
-    /// for privacy (see BookmarkRecord docstring).
     func testCodableRoundTripPreservesLoadBearingFields() throws {
         var bytes = [UInt8](repeating: 0, count: 1024)
         for i in 0..<bytes.count {
@@ -38,10 +33,6 @@ final class BookmarkRecordTests: XCTestCase {
         XCTAssertEqual(decoded, original,
                        "Equatable ignores originalPath, so the records must compare equal")
     }
-
-    /// The encoded payload must not contain `originalPath` as a key OR the
-    /// path's directory components as a value. This is the privacy guarantee
-    /// the docstring promises.
     func testEncodedPayloadDoesNotLeakPath() throws {
         let secretPath = "/Users/foo/Documents/SECRET-MARKER-1234/scan.pdf"
         let record = BookmarkRecord(

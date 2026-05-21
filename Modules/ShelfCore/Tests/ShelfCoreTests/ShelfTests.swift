@@ -4,7 +4,7 @@ import XCTest
 final class ShelfTests: XCTestCase {
 
     func testInitWithDefaultsCreatesEmptyShelf() {
-        let shelf = Shelf()
+        let shelf = ShelfGroup()
         XCTAssertEqual(shelf.name, "")
         XCTAssertTrue(shelf.items.isEmpty)
         XCTAssertEqual(shelf.lastUsedAt, shelf.createdAt,
@@ -13,7 +13,7 @@ final class ShelfTests: XCTestCase {
 
     func testInitWithItemsRetainsItems() {
         let item = ShelfItem(kind: .text("hello"), displayName: "Greeting")
-        let shelf = Shelf(name: "Inbox", items: [item])
+        let shelf = ShelfGroup(name: "Inbox", items: [item])
         XCTAssertEqual(shelf.name, "Inbox")
         XCTAssertEqual(shelf.items.count, 1)
         XCTAssertEqual(shelf.items.first, item)
@@ -53,8 +53,8 @@ final class ShelfTests: XCTestCase {
         ]
         let createdAt = Date(timeIntervalSince1970: 1_699_000_000)
         let lastUsedAt = Date(timeIntervalSince1970: 1_700_500_000)
-        let original = Shelf(
-            id: ShelfID(rawValue: UUID()),
+        let original = ShelfGroup(
+            id: ShelfGroupID(rawValue: UUID()),
             name: "Mixed",
             items: items,
             createdAt: createdAt,
@@ -62,25 +62,24 @@ final class ShelfTests: XCTestCase {
         )
 
         let data = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(Shelf.self, from: data)
+        let decoded = try JSONDecoder().decode(ShelfGroup.self, from: data)
         XCTAssertEqual(decoded, original,
-                       "Full Shelf with one item per kind must round-trip equal")
+                       "Full ShelfGroup with one item per kind must round-trip equal")
         XCTAssertEqual(decoded.items.count, 4)
     }
 
     func testLastUsedAtDefaultsToCreatedAt() {
         let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
-        let shelf = Shelf(createdAt: createdAt)
+        let shelf = ShelfGroup(createdAt: createdAt)
         XCTAssertEqual(shelf.lastUsedAt, createdAt)
         XCTAssertEqual(shelf.createdAt, createdAt)
     }
 
     func testLastUsedAtCanBeMutated() {
-        var shelf = Shelf(name: "Mutable")
+        var shelf = ShelfGroup(name: "Mutable")
         let newDate = Date(timeIntervalSince1970: 1_800_000_000)
         shelf.lastUsedAt = newDate
         XCTAssertEqual(shelf.lastUsedAt, newDate)
-        // createdAt is `let` and stays at its original value.
         XCTAssertNotEqual(shelf.createdAt, newDate)
     }
 }

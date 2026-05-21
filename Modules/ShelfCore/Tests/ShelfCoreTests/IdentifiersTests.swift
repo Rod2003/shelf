@@ -3,43 +3,39 @@ import XCTest
 
 final class IdentifiersTests: XCTestCase {
 
-    // MARK: - ShelfID
-
     func testShelfIDInitWithDefaultUUIDIsUnique() {
-        let a = ShelfID()
-        let b = ShelfID()
+        let a = ShelfGroupID()
+        let b = ShelfGroupID()
         XCTAssertNotEqual(a, b, "Two default-init ShelfIDs should have distinct UUIDs")
         XCTAssertNotEqual(a.rawValue, b.rawValue)
     }
 
     func testShelfIDInitWithExplicitUUIDPreservesValue() {
         let uuid = UUID()
-        let id = ShelfID(rawValue: uuid)
+        let id = ShelfGroupID(rawValue: uuid)
         XCTAssertEqual(id.rawValue, uuid)
     }
 
     func testShelfIDCodableRoundTrip() throws {
-        let original = ShelfID(rawValue: UUID())
+        let original = ShelfGroupID(rawValue: UUID())
         let data = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(ShelfID.self, from: data)
+        let decoded = try JSONDecoder().decode(ShelfGroupID.self, from: data)
         XCTAssertEqual(decoded, original)
         XCTAssertEqual(decoded.rawValue, original.rawValue)
     }
 
     func testShelfIDHashableAllowsSetInsertion() {
         let uuid = UUID()
-        let a = ShelfID(rawValue: uuid)
-        let b = ShelfID(rawValue: uuid)
-        let c = ShelfID()
-        var set: Set<ShelfID> = []
+        let a = ShelfGroupID(rawValue: uuid)
+        let b = ShelfGroupID(rawValue: uuid)
+        let c = ShelfGroupID()
+        var set: Set<ShelfGroupID> = []
         set.insert(a)
         set.insert(b)
         XCTAssertEqual(set.count, 1, "Equal IDs collapse to one entry in Set")
         set.insert(c)
         XCTAssertEqual(set.count, 2, "Distinct ID adds a second entry")
     }
-
-    // MARK: - ItemID
 
     func testItemIDInitWithDefaultUUIDIsUnique() {
         let a = ItemID()
@@ -75,17 +71,11 @@ final class IdentifiersTests: XCTestCase {
         XCTAssertEqual(set.count, 2)
     }
 
-    // MARK: - Type Distinction (compile-time)
-
     func testShelfIDAndItemIDAreDistinctTypes() {
-        // This test verifies at compile time that ShelfID and ItemID are
-        // distinct types and cannot be silently interchanged. The body
-        // simply confirms each type has its own metatype identity.
-        let shelfMeta: Any.Type = ShelfID.self
+        let shelfMeta: Any.Type = ShelfGroupID.self
         let itemMeta: Any.Type = ItemID.self
-        XCTAssertFalse(shelfMeta == itemMeta, "ShelfID and ItemID must be distinct types")
-        // Verify each type has its own metatype.
-        XCTAssertTrue(ShelfID.self == ShelfID.self)
+        XCTAssertFalse(shelfMeta == itemMeta, "ShelfGroupID and ItemID must be distinct types")
+        XCTAssertTrue(ShelfGroupID.self == ShelfGroupID.self)
         XCTAssertTrue(ItemID.self == ItemID.self)
     }
 }
