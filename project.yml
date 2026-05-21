@@ -21,9 +21,6 @@ settings:
 packages:
   ShelfCore:
     path: Modules/ShelfCore
-  SnapshotTesting:
-    url: https://github.com/pointfreeco/swift-snapshot-testing
-    from: "1.17.0"
 targets:
   Shelf:
     type: application
@@ -82,8 +79,6 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
     dependencies:
       - target: Shelf
-      - package: SnapshotTesting
-        product: SnapshotTesting
 schemes:
   Shelf:
     build:

@@ -11,34 +11,24 @@
 		079005322526153660665094 /* ShelfItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 017371AE4855A7F2EC90E101 /* ShelfItemView.swift */; };
 		0841C6C1DC2D2BC735EFF0C7 /* ThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83B1CFC6CC772B8F8500F142 /* ThumbnailService.swift */; };
 		0DDADE154054E088C9E1820B /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F624EA7FEEE62817649A5306 /* AppCoordinator.swift */; };
-		0E2326C606FAC574128988F9 /* testNamedShelfHeaderLight.named-shelf.png in Resources */ = {isa = PBXBuildFile; fileRef = CFB1C307C75D97156445A09E /* testNamedShelfHeaderLight.named-shelf.png */; };
 		195A5CD09E32AC949E7F5274 /* FilePromiseDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F19D9F06798B57B3E4BD4F /* FilePromiseDelegate.swift */; };
 		19FE6C01B7BBE287C72E4B0B /* DragInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914B338A4F4A43DF7CCC20FD /* DragInView.swift */; };
-		1AD7FA3374F7204BCA59D266 /* testThreeItemsLight.three-items.png in Resources */ = {isa = PBXBuildFile; fileRef = 4E4364DCD40F8FE006445615 /* testThreeItemsLight.three-items.png */; };
 		1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */; };
 		206F9D67EC5F24562DAF3B3D /* QuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B5BDFF83FD8506E84EA798 /* QuickLookCoordinator.swift */; };
 		2488D85FA07A1F7021A1F0E2 /* ShelfWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A266B1AD6FB399CB6EFD074F /* ShelfWindowManager.swift */; };
-		2BBD1674500F6E090C6C1FC2 /* testManyItemsDark.many-items.png in Resources */ = {isa = PBXBuildFile; fileRef = E266ACF68D08D420D67F6E61 /* testManyItemsDark.many-items.png */; };
-		420AF139A34450D36838123C /* testThreeItemsDark.three-items.png in Resources */ = {isa = PBXBuildFile; fileRef = AE6C4B300D85BC3FC9F05706 /* testThreeItemsDark.three-items.png */; };
 		52EA7E375D5D7EB46112E347 /* WindowDragHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F840645DF9CA67A0DC5C7731 /* WindowDragHandle.swift */; };
 		548EBD8895AB9CCE6FC48509 /* ShelfWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975B7DBEEB0705424B1F593F /* ShelfWindowController.swift */; };
 		58941865293EABA9E328B014 /* DefaultsBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCBC42A0A5FC5B077472D342 /* DefaultsBackend.swift */; };
 		59BB2547B9DC60CC415D6088 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC303335B537BC2084DE0AC7 /* ShakeDetector.swift */; };
 		6093F6DBFC90938CC41C91B1 /* ShelfApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */; };
 		699A66100E294AC382A31397 /* NoWindowDragOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A45426C0FA45A365BEDD0D1 /* NoWindowDragOverlay.swift */; };
-		6BAF9ABC4F584E725EACC18E /* testNamedShelfHeaderDark.named-shelf.png in Resources */ = {isa = PBXBuildFile; fileRef = 7FA0B86B38737F43CC8B922B /* testNamedShelfHeaderDark.named-shelf.png */; };
 		6DB3EFDE157406CD9DE407BC /* PanelPositioner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5804D49D01AAADB58714ED8 /* PanelPositioner.swift */; };
 		7086889CF5051BE6EB9222B3 /* ContentViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */; };
 		730CFB1D2ABC2638E99D0144 /* ShelfCore in Frameworks */ = {isa = PBXBuildFile; productRef = D3B3D7FE690B7CCB4CC75D90 /* ShelfCore */; };
-		804E41CE8C916A5ACF9C03D6 /* testManyItemsLight.many-items.png in Resources */ = {isa = PBXBuildFile; fileRef = 155EDFC9EA975339D64F3DD1 /* testManyItemsLight.many-items.png */; };
-		835C92F84AC1AE50041FD070 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = D4943609A103101A2309703D /* SnapshotTesting */; };
-		84BF7070FD78045F3885F440 /* testEmptyShelfLight.empty.png in Resources */ = {isa = PBXBuildFile; fileRef = E832380FC4B829977C8C73D6 /* testEmptyShelfLight.empty.png */; };
 		8BB39BB6967C4533412FDB10 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */; };
 		8F6D6B537157D62A0904EF60 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52830C11D37CBBA9C1A8847E /* main.swift */; };
 		922C86691654550D232B8E9F /* DragInDragOutIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */; };
 		98175A0C21FDC07785042413 /* DragOutCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B5B8D12EBC926332892831 /* DragOutCell.swift */; };
-		AA7C7F9D55189FD78D01F493 /* testEmptyShelfDark.empty.png in Resources */ = {isa = PBXBuildFile; fileRef = 5814AE88C0EBB07C4337E75B /* testEmptyShelfDark.empty.png */; };
-		BD470BC6212629C4167158EB /* ShelfContentViewSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A2F7036BC4611EA72C5B47 /* ShelfContentViewSnapshotTests.swift */; };
 		BDB1864E8999279C691F5EBD /* BookmarkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1768532C2DF593AF0917E5 /* BookmarkResolver.swift */; };
 		C06BC9D5FA41DD7833A0B4E0 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC8A686F7D6912CA8488F09 /* MenuBarController.swift */; };
 		C242A3805A9E987DF05B9BDA /* DragItemFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E1FF9FBB78510063F526A6 /* DragItemFactory.swift */; };
@@ -65,23 +55,18 @@
 		017371AE4855A7F2EC90E101 /* ShelfItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfItemView.swift; sourceTree = "<group>"; };
 		01C4DA5845E8AADE7BAFB66B /* ShelfTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShelfTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfApplication.swift; sourceTree = "<group>"; };
-		05A2F7036BC4611EA72C5B47 /* ShelfContentViewSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfContentViewSnapshotTests.swift; sourceTree = "<group>"; };
 		08B5BDFF83FD8506E84EA798 /* QuickLookCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookCoordinator.swift; sourceTree = "<group>"; };
 		09F19D9F06798B57B3E4BD4F /* FilePromiseDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePromiseDelegate.swift; sourceTree = "<group>"; };
-		155EDFC9EA975339D64F3DD1 /* testManyItemsLight.many-items.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testManyItemsLight.many-items.png"; sourceTree = "<group>"; };
 		21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragInDragOutIntegrationTests.swift; sourceTree = "<group>"; };
 		2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManagerIntegrationTests.swift; sourceTree = "<group>"; };
 		27DD4C528E61B83644644570 /* ShelfCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ShelfCore; path = Modules/ShelfCore; sourceTree = SOURCE_ROOT; };
 		2A45426C0FA45A365BEDD0D1 /* NoWindowDragOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoWindowDragOverlay.swift; sourceTree = "<group>"; };
 		39E1FF9FBB78510063F526A6 /* DragItemFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragItemFactory.swift; sourceTree = "<group>"; };
-		4E4364DCD40F8FE006445615 /* testThreeItemsLight.three-items.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testThreeItemsLight.three-items.png"; sourceTree = "<group>"; };
 		4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPositionerTests.swift; sourceTree = "<group>"; };
 		52830C11D37CBBA9C1A8847E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		5814AE88C0EBB07C4337E75B /* testEmptyShelfDark.empty.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = testEmptyShelfDark.empty.png; sourceTree = "<group>"; };
 		6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewFactory.swift; sourceTree = "<group>"; };
 		774F726E1E1B25D732E2C7FD /* Shelf.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shelf.entitlements; sourceTree = "<group>"; };
 		77B5B8D12EBC926332892831 /* DragOutCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOutCell.swift; sourceTree = "<group>"; };
-		7FA0B86B38737F43CC8B922B /* testNamedShelfHeaderDark.named-shelf.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testNamedShelfHeaderDark.named-shelf.png"; sourceTree = "<group>"; };
 		83B1CFC6CC772B8F8500F142 /* ThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailService.swift; sourceTree = "<group>"; };
 		8C58EA9E17445AA8D21FBA04 /* ShelfViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfViewModel.swift; sourceTree = "<group>"; };
 		914B338A4F4A43DF7CCC20FD /* DragInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragInView.swift; sourceTree = "<group>"; };
@@ -90,17 +75,13 @@
 		9AC8A686F7D6912CA8488F09 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A266B1AD6FB399CB6EFD074F /* ShelfWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfWindowManager.swift; sourceTree = "<group>"; };
 		A7BA7449A7ED3543AAD7A801 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		AE6C4B300D85BC3FC9F05706 /* testThreeItemsDark.three-items.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testThreeItemsDark.three-items.png"; sourceTree = "<group>"; };
 		AEE65A95AA9D516A78DF7D9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B27FF0B3E8BE78EDA796765A /* DragOutSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOutSource.swift; sourceTree = "<group>"; };
 		C434CA69BBA8550DF6E411AC /* Shelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		CFB1C307C75D97156445A09E /* testNamedShelfHeaderLight.named-shelf.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testNamedShelfHeaderLight.named-shelf.png"; sourceTree = "<group>"; };
 		D007C9A73EDBE5752206EF94 /* DisplayChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayChangeTests.swift; sourceTree = "<group>"; };
 		DD1768532C2DF593AF0917E5 /* BookmarkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkResolver.swift; sourceTree = "<group>"; };
 		E0AECD059305CC2A346F187B /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
-		E266ACF68D08D420D67F6E61 /* testManyItemsDark.many-items.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "testManyItemsDark.many-items.png"; sourceTree = "<group>"; };
-		E832380FC4B829977C8C73D6 /* testEmptyShelfLight.empty.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = testEmptyShelfLight.empty.png; sourceTree = "<group>"; };
 		EC36DCF7107668303D2218A4 /* ShelfContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfContentView.swift; sourceTree = "<group>"; };
 		F5804D49D01AAADB58714ED8 /* PanelPositioner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPositioner.swift; sourceTree = "<group>"; };
 		F624EA7FEEE62817649A5306 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -110,14 +91,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		1DCEA8469AC6C76D3B451060 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				835C92F84AC1AE50041FD070 /* SnapshotTesting in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		875010B4727E585F35DBF312 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -148,14 +121,6 @@
 				FCBC42A0A5FC5B077472D342 /* DefaultsBackend.swift */,
 			);
 			path = Persist;
-			sourceTree = "<group>";
-		};
-		1F4F31C7172E19C4797E559B /* __Snapshots__ */ = {
-			isa = PBXGroup;
-			children = (
-				F8A762756E2F491A7DBB25E8 /* ShelfContentViewSnapshotTests */,
-			);
-			path = __Snapshots__;
 			sourceTree = "<group>";
 		};
 		2FEF38D365FAA7AFA1782EC2 /* UI */ = {
@@ -189,7 +154,6 @@
 				2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */,
 				4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */,
 				9285D0BEF5CDDAF194E923E6 /* PersistenceIntegrationTests.swift */,
-				7C52492B1DC56D3FCA59350F /* Snapshots */,
 			);
 			path = ShelfTests;
 			sourceTree = "<group>";
@@ -222,15 +186,6 @@
 				BC0CB152AF7F7836D8F054F6 /* Window */,
 			);
 			path = Shelf;
-			sourceTree = "<group>";
-		};
-		7C52492B1DC56D3FCA59350F /* Snapshots */ = {
-			isa = PBXGroup;
-			children = (
-				05A2F7036BC4611EA72C5B47 /* ShelfContentViewSnapshotTests.swift */,
-				1F4F31C7172E19C4797E559B /* __Snapshots__ */,
-			);
-			path = Snapshots;
 			sourceTree = "<group>";
 		};
 		AC1DA195D6463FE432930E9E /* Packages */ = {
@@ -267,21 +222,6 @@
 			path = Lifecycle;
 			sourceTree = "<group>";
 		};
-		F8A762756E2F491A7DBB25E8 /* ShelfContentViewSnapshotTests */ = {
-			isa = PBXGroup;
-			children = (
-				5814AE88C0EBB07C4337E75B /* testEmptyShelfDark.empty.png */,
-				E832380FC4B829977C8C73D6 /* testEmptyShelfLight.empty.png */,
-				E266ACF68D08D420D67F6E61 /* testManyItemsDark.many-items.png */,
-				155EDFC9EA975339D64F3DD1 /* testManyItemsLight.many-items.png */,
-				7FA0B86B38737F43CC8B922B /* testNamedShelfHeaderDark.named-shelf.png */,
-				CFB1C307C75D97156445A09E /* testNamedShelfHeaderLight.named-shelf.png */,
-				AE6C4B300D85BC3FC9F05706 /* testThreeItemsDark.three-items.png */,
-				4E4364DCD40F8FE006445615 /* testThreeItemsLight.three-items.png */,
-			);
-			path = ShelfContentViewSnapshotTests;
-			sourceTree = "<group>";
-		};
 		F98F003EE2747A05DCC0CF21 = {
 			isa = PBXGroup;
 			children = (
@@ -300,8 +240,6 @@
 			buildConfigurationList = 1877527325C4A8929898C501 /* Build configuration list for PBXNativeTarget "ShelfTests" */;
 			buildPhases = (
 				2CFD2148F250011203F2AFF2 /* Sources */,
-				AE240B72595DE8F7A9E02812 /* Resources */,
-				1DCEA8469AC6C76D3B451060 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -310,7 +248,6 @@
 			);
 			name = ShelfTests;
 			packageProductDependencies = (
-				D4943609A103101A2309703D /* SnapshotTesting */,
 			);
 			productName = ShelfTests;
 			productReference = 01C4DA5845E8AADE7BAFB66B /* ShelfTests.xctest */;
@@ -363,7 +300,6 @@
 			mainGroup = F98F003EE2747A05DCC0CF21;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D8B6A0AE57BFA575A104EB41 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 				53F9C41E0960CE02A50E6392 /* XCLocalSwiftPackageReference "Modules/ShelfCore" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -386,21 +322,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AE240B72595DE8F7A9E02812 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AA7C7F9D55189FD78D01F493 /* testEmptyShelfDark.empty.png in Resources */,
-				84BF7070FD78045F3885F440 /* testEmptyShelfLight.empty.png in Resources */,
-				2BBD1674500F6E090C6C1FC2 /* testManyItemsDark.many-items.png in Resources */,
-				804E41CE8C916A5ACF9C03D6 /* testManyItemsLight.many-items.png in Resources */,
-				6BAF9ABC4F584E725EACC18E /* testNamedShelfHeaderDark.named-shelf.png in Resources */,
-				0E2326C606FAC574128988F9 /* testNamedShelfHeaderLight.named-shelf.png in Resources */,
-				420AF139A34450D36838123C /* testThreeItemsDark.three-items.png in Resources */,
-				1AD7FA3374F7204BCA59D266 /* testThreeItemsLight.three-items.png in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -413,7 +334,6 @@
 				1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */,
 				C493CF244A5E1DE46525FF95 /* PanelPositionerTests.swift in Sources */,
 				DFC1336B119555D27CDCCB0A /* PersistenceIntegrationTests.swift in Sources */,
-				BD470BC6212629C4167158EB /* ShelfContentViewSnapshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -723,26 +643,10 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		D8B6A0AE57BFA575A104EB41 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.17.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
 		D3B3D7FE690B7CCB4CC75D90 /* ShelfCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ShelfCore;
-		};
-		D4943609A103101A2309703D /* SnapshotTesting */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8B6A0AE57BFA575A104EB41 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
-			productName = SnapshotTesting;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
