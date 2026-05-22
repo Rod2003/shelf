@@ -300,11 +300,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
 
         let writer = makePasteboardWriter(for: item)
         let draggingItem = NSDraggingItem(pasteboardWriter: writer)
-        if let snapshot = snapshotImage() {
-            draggingItem.setDraggingFrame(bounds, contents: snapshot)
-        } else {
-            draggingItem.draggingFrame = bounds
-        }
+        configureDraggingItem(draggingItem, item: item, frame: bounds)
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
 
@@ -316,23 +312,84 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             let draggingItem = NSDraggingItem(pasteboardWriter: writer)
             let offset = CGFloat(index) * 3
             let frame = bounds.offsetBy(dx: offset, dy: -offset)
-            if index == 0, let snapshot = snapshotImage() {
-                draggingItem.setDraggingFrame(bounds, contents: snapshot)
-            } else {
-                draggingItem.draggingFrame = frame
-            }
+            configureDraggingItem(draggingItem, item: item, frame: frame)
             return draggingItem
         }
         let session = beginDraggingSession(with: dragItems, event: event, source: self)
         session.draggingFormation = .stack
     }
 
-    private func snapshotImage() -> NSImage? {
-        guard let bitmap = bitmapImageRepForCachingDisplay(in: bounds) else { return nil }
-        cacheDisplay(in: bounds, to: bitmap)
-        let image = NSImage(size: bounds.size)
-        image.addRepresentation(bitmap)
+    private func configureDraggingItem(_ draggingItem: NSDraggingItem, item: ShelfItem, frame: CGRect) {
+        guard
+            let image = cleanDragImage(for: item),
+            let imageFrame = aspectFitFrame(for: image.size, in: frame)
+        else {
+            draggingItem.draggingFrame = frame
+            return
+        }
+        draggingItem.setDraggingFrame(imageFrame, contents: image)
+    }
+
+    private func cleanDragImage(for item: ShelfItem) -> NSImage? {
+        switch item.kind {
+        case .fileBookmark(let record):
+            let resolver = BookmarkResolver()
+            do {
+                let resolution = try resolver.resolve(record)
+                defer { resolver.release(resolution.url) }
+                return sourceImage(from: resolution.url)
+            } catch {
+                Self.log.warning("Drag image bookmark resolve failed for \(record.originalPath, privacy: .public): \(String(describing: error), privacy: .public)")
+                return nil
+            }
+
+        case .clipboardImage(let filename):
+            guard let url = clipboardImageURL(filename: filename) else { return nil }
+            return sourceImage(from: url)
+
+        case .webURL, .text:
+            return nil
+        }
+    }
+
+    private func sourceImage(from url: URL) -> NSImage? {
+        guard
+            let data = try? Data(contentsOf: url),
+            let image = NSImage(data: data),
+            image.size.width > 0,
+            image.size.height > 0
+        else {
+            return nil
+        }
         return image
+    }
+
+    private func aspectFitFrame(for sourceSize: CGSize, in rect: CGRect) -> CGRect? {
+        guard sourceSize.width > 0, sourceSize.height > 0, rect.width > 0, rect.height > 0 else {
+            return nil
+        }
+        let scale = min(rect.width / sourceSize.width, rect.height / sourceSize.height)
+        let size = CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        return CGRect(
+            x: rect.midX - size.width / 2,
+            y: rect.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+    }
+
+    private func clipboardImageURL(filename: String) -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            return nil
+        }
+        let url = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func makePasteboardWriter(for item: ShelfItem, includeItemID: Bool = false) -> NSPasteboardWriting {

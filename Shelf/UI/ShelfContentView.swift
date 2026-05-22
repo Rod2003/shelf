@@ -48,7 +48,6 @@ public struct ShelfContentView: View {
                 StackedShelfView(
                     viewModel: viewModel,
                     resolver: resolver,
-                    thumbnailService: thumbnailService,
                     onSingleDragEnded: onSingleDragEnded,
                     onMultiDragEnded: onMultiDragEnded
                 )
@@ -133,7 +132,6 @@ public struct ShelfContentView: View {
 private struct StackedShelfView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
-    let thumbnailService: ThumbnailService?
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
 
@@ -154,8 +152,7 @@ private struct StackedShelfView: View {
                 ) {
                     StackCardsView(
                         items: viewModel.items,
-                        resolver: resolver,
-                        thumbnailService: thumbnailService
+                        resolver: resolver
                     )
                 }
             }
@@ -174,79 +171,66 @@ private struct StackedShelfView: View {
 }
 
 private struct StackCardsView: View {
+    private static let layerStyles: [(rotation: Double, offset: CGSize)] = [
+        (0, .zero),
+        (-5, CGSize(width: -2, height: 2)),
+        (5, CGSize(width: 4, height: 4)),
+    ]
+
     let items: [ShelfItem]
     let resolver: BookmarkResolver?
-    let thumbnailService: ThumbnailService?
+
+    private var visibleLayers: [StackLayer] {
+        let layers = zip(items.prefix(3), Self.layerStyles).map { item, style in
+            StackLayer(item: item, rotation: style.rotation, offset: style.offset)
+        }
+        return Array(layers.reversed())
+    }
 
     var body: some View {
         ZStack {
-            if items.count >= 3 {
-                BlankStackCard()
-                    .rotationEffect(.degrees(5))
-                    .offset(x: 4, y: 4)
-            }
-            if items.count >= 2 {
-                BlankStackCard()
-                    .rotationEffect(.degrees(-5))
-                    .offset(x: -2, y: 2)
-            }
-            if let top = items.first {
-                TopStackCard(item: top, resolver: resolver, thumbnailService: thumbnailService)
+            ForEach(visibleLayers) { layer in
+                StackThumbnailCard(
+                    item: layer.item,
+                    resolver: resolver
+                )
+                .rotationEffect(.degrees(layer.rotation))
+                .offset(layer.offset)
             }
         }
         .frame(width: 96, height: 96)
     }
 }
 
-private struct BlankStackCard: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(.regularMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(.separator.opacity(0.45), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.14), radius: 3, x: 0, y: 1)
-            .frame(width: 84, height: 84)
-    }
+private struct StackLayer: Identifiable {
+    let item: ShelfItem
+    let rotation: Double
+    let offset: CGSize
+
+    var id: ItemID { item.id }
 }
 
-private struct TopStackCard: View {
+private struct StackThumbnailCard: View {
     let item: ShelfItem
     let resolver: BookmarkResolver?
-    let thumbnailService: ThumbnailService?
     @State private var thumbnail: NSImage?
     private let maxImageSize = CGSize(width: 84, height: 84)
 
     var body: some View {
         ZStack {
-            if let thumbnail, let fittedSize = fittedSize(for: thumbnail.size) {
+            if let thumbnail {
                 Image(nsImage: thumbnail)
                     .resizable()
                     .scaledToFit()
-                    .padding(2)
-                    .frame(width: fittedSize.width, height: fittedSize.height)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(.separator.opacity(0.55), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
             } else {
                 placeholder
-                    .frame(width: maxImageSize.width, height: maxImageSize.height)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(.separator.opacity(0.55), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
             }
         }
-            .frame(width: maxImageSize.width, height: maxImageSize.height)
-            .help(item.displayName)
-            .task(id: item.id) {
-                await loadThumbnailIfNeeded()
-            }
+        .frame(width: maxImageSize.width, height: maxImageSize.height)
+        .help(item.displayName)
+        .task(id: item.id) {
+            await loadThumbnailIfNeeded()
+        }
     }
 
     @ViewBuilder
@@ -267,26 +251,50 @@ private struct TopStackCard: View {
         }
     }
 
-    private func fittedSize(for sourceSize: CGSize) -> CGSize? {
-        guard sourceSize.width > 0, sourceSize.height > 0 else { return nil }
-        let scale = min(maxImageSize.width / sourceSize.width, maxImageSize.height / sourceSize.height)
-        return CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
-    }
-
     private func loadThumbnailIfNeeded() async {
-        guard
-            case .fileBookmark(let record) = item.kind,
-            let resolver,
-            let thumbnailService
-        else { return }
         do {
-            let resolution = try resolver.resolve(record)
-            let image = await thumbnailService.thumbnail(for: resolution.url)
-            resolver.release(resolution.url)
-            thumbnail = image
+            switch item.kind {
+            case .fileBookmark(let record):
+                guard let resolver else { return }
+                let resolution = try resolver.resolve(record)
+                defer { resolver.release(resolution.url) }
+                thumbnail = sourceImageIfAvailable(for: resolution.url)
+                return
+            case .clipboardImage(let filename):
+                guard let resolvedURL = clipboardImageURL(filename: filename) else { return }
+                thumbnail = sourceImageIfAvailable(for: resolvedURL)
+            case .webURL, .text:
+                return
+            }
         } catch {
             thumbnail = nil
         }
+    }
+
+    private func sourceImageIfAvailable(for url: URL) -> NSImage? {
+        guard
+            let data = try? Data(contentsOf: url),
+            let image = NSImage(data: data),
+            image.size.width > 0,
+            image.size.height > 0
+        else {
+            return nil
+        }
+        return image
+    }
+
+    private func clipboardImageURL(filename: String) -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            return nil
+        }
+        let url = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 }
 
