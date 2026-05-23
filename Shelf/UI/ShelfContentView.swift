@@ -16,6 +16,7 @@ public struct ShelfContentView: View {
 
     @State private var isCloseHovering: Bool = false
     @State private var isCollapseHovering: Bool = false
+    @Namespace private var morphNamespace
 
     public init(
         viewModel: ShelfViewModel,
@@ -38,37 +39,37 @@ public struct ShelfContentView: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .topTrailing) {
+        Group {
             if viewModel.items.isEmpty {
                 emptyState
             } else if viewModel.isExpanded {
                 expandedContent
-                    .padding(.top, 36)
+                    .transition(.opacity)
             } else {
                 StackedShelfView(
                     viewModel: viewModel,
                     resolver: resolver,
+                    namespace: morphNamespace,
                     onSingleDragEnded: onSingleDragEnded,
                     onMultiDragEnded: onMultiDragEnded
                 )
-                    .padding(.top, 36)
-            }
-
-            closeButton
-                .padding(.top, 6)
-                .padding(.trailing, 6)
-
-            if viewModel.isExpanded {
-                collapseButton
-                    .padding(.top, 6)
-                    .padding(.leading, 6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.opacity)
             }
         }
         .frame(
             minWidth: viewModel.isExpanded ? Self.expandedPanelSize.width : Self.collapsedPanelSize.width,
             minHeight: viewModel.isExpanded ? Self.expandedPanelSize.height : Self.collapsedPanelSize.height
         )
+        .overlay(alignment: .topTrailing) {
+            closeButton
+                .padding(6)
+        }
+        .overlay(alignment: .topLeading) {
+            if viewModel.isExpanded {
+                collapseButton
+                    .padding(6)
+            }
+        }
     }
 
     private var closeButton: some View {
@@ -121,6 +122,7 @@ public struct ShelfContentView: View {
             viewModel: viewModel,
             resolver: resolver,
             thumbnailService: thumbnailService,
+            namespace: morphNamespace,
             onSingleDragEnded: onSingleDragEnded,
             onMultiDragEnded: onMultiDragEnded,
             onDeleteItems: onDeleteItems,
@@ -132,6 +134,7 @@ public struct ShelfContentView: View {
 private struct StackedShelfView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
+    let namespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
 
@@ -152,7 +155,8 @@ private struct StackedShelfView: View {
                 ) {
                     StackCardsView(
                         items: viewModel.items,
-                        resolver: resolver
+                        resolver: resolver,
+                        namespace: namespace
                     )
                 }
             }
@@ -166,7 +170,7 @@ private struct StackedShelfView: View {
                 .padding(.horizontal, 14)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }
 
@@ -179,6 +183,7 @@ private struct StackCardsView: View {
 
     let items: [ShelfItem]
     let resolver: BookmarkResolver?
+    let namespace: Namespace.ID
 
     private var visibleLayers: [StackLayer] {
         let layers = zip(items.prefix(3), Self.layerStyles).map { item, style in
@@ -196,6 +201,20 @@ private struct StackCardsView: View {
                 )
                 .rotationEffect(.degrees(layer.rotation))
                 .offset(layer.offset)
+                .matchedGeometryEffect(
+                    id: layer.item.id,
+                    in: namespace,
+                    isSource: true
+                )
+            }
+            ForEach(Array(items.dropFirst(3)), id: \.id) { item in
+                Color.clear
+                    .frame(width: 84, height: 84)
+                    .matchedGeometryEffect(
+                        id: item.id,
+                        in: namespace,
+                        isSource: true
+                    )
             }
         }
         .frame(width: 96, height: 96)
@@ -398,6 +417,7 @@ private struct ShelfDrawerView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
+    let namespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     let onDeleteItems: ((Set<ItemID>) -> Void)?
@@ -444,9 +464,15 @@ private struct ShelfDrawerView: View {
                                 )
                         )
                     }
+                    .matchedGeometryEffect(
+                        id: item.id,
+                        in: namespace,
+                        isSource: false
+                    )
                 }
             }
             .padding(.horizontal, 14)
+            .padding(.top, 42)
             .padding(.bottom, 12)
         }
         .focusable(true)
