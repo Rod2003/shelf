@@ -1,6 +1,11 @@
 import Foundation
 import Combine
+import SwiftUI
 import ShelfCore
+
+public enum ShelfAnimation {
+    public static let expansion: Animation = .timingCurve(0.32, 0.94, 0.36, 1.0, duration: 0.32)
+}
 
 @MainActor
 public final class ShelfViewModel: ObservableObject {
@@ -12,6 +17,11 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var drawerSelection: Set<ItemID>
     @Published public var drawerActiveSelectionID: ItemID?
 
+    /// Animates the panel between collapsed and expanded sizes. Invoked by
+    /// `setExpanded` to sequence the window resize and the SwiftUI content
+    /// animation so they don't fight each other. Wired in by AppCoordinator.
+    public var animateWindow: ((_ expanded: Bool, _ completion: @escaping () -> Void) -> Void)?
+
     public init(shelf: ShelfGroup) {
         self.shelfID = shelf.id
         self.name = shelf.name
@@ -20,6 +30,30 @@ public final class ShelfViewModel: ObservableObject {
         self.isExpanded = false
         self.drawerSelection = []
         self.drawerActiveSelectionID = nil
+    }
+
+    public func setExpanded(_ expanded: Bool) {
+        guard isExpanded != expanded else { return }
+        let curve = ShelfAnimation.expansion
+        guard let animateWindow else {
+            withAnimation(curve) { isExpanded = expanded }
+            return
+        }
+        if expanded {
+            // Phase 1: grow the window with the stack still rendered.
+            // Phase 2: flip state so matched-geometry disperses items into the grid.
+            animateWindow(true) { [weak self] in
+                withAnimation(curve) { self?.isExpanded = true }
+            }
+        } else {
+            // Phase 1: matched-geometry gathers items back into the stack.
+            // Phase 2: shrink the window once the gather animation has finished.
+            withAnimation(curve) {
+                isExpanded = false
+            } completion: {
+                animateWindow(false) { }
+            }
+        }
     }
 
     public func reload(from shelf: ShelfGroup) {
