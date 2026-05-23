@@ -49,6 +49,8 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.hasShadow = true
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
+        panel.animationBehavior = .none
+        contentView.wantsLayer = true
         panel.contentView = contentView
 
         self.panel = panel
@@ -66,49 +68,44 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         log.info("Shelf panel close requested id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
     }
 
+    public static let expansionDuration: TimeInterval = 0.32
+
     public func setFrameWidth(_ targetWidth: CGFloat, animated: Bool) {
         setFrameSize(CGSize(width: targetWidth, height: panel.frame.height), animated: animated)
     }
 
-    public func setFrameSize(_ targetSize: CGSize, animated: Bool, bouncy: Bool = false) {
-        guard targetSize.width > 0, targetSize.height > 0 else { return }
-        guard animated else {
-            panel.setFrame(frame(for: targetSize), display: true, animate: false)
+    public func setFrameSize(
+        _ targetSize: CGSize,
+        animated: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        guard targetSize.width > 0, targetSize.height > 0 else {
+            completion?()
             return
         }
-        guard bouncy else {
-            panel.setFrame(frame(for: targetSize), display: true, animate: true)
-            return
-        }
-
-        let currentSize = panel.frame.size
-        let widthDirection: CGFloat = targetSize.width >= currentSize.width ? 1 : -1
-        let heightDirection: CGFloat = targetSize.height >= currentSize.height ? 1 : -1
-        let overshoot = CGSize(
-            width: targetSize.width + widthDirection * min(14, max(6, abs(targetSize.width - currentSize.width) * 0.05)),
-            height: targetSize.height + heightDirection * min(14, max(6, abs(targetSize.height - currentSize.height) * 0.05))
-        )
-        let overshootFrame = frame(for: overshoot)
         let targetFrame = frame(for: targetSize)
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().setFrame(overshootFrame, display: true)
-        } completionHandler: {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.16
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                self.panel.animator().setFrame(targetFrame, display: true)
-            }
+        guard animated else {
+            panel.setFrame(targetFrame, display: true, animate: false)
+            completion?()
+            return
         }
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = Self.expansionDuration
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.32, 0.94, 0.36, 1.0)
+            context.allowsImplicitAnimation = true
+            panel.animator().setFrame(targetFrame, display: true)
+        }, completionHandler: completion)
     }
 
     private func frame(for targetSize: CGSize) -> NSRect {
         var frame = panel.frame
-        let oldTopY = frame.maxY
+        let oldMidX = frame.midX
+        let oldMidY = frame.midY
         frame.size = targetSize
-        frame.origin.y = oldTopY - frame.height
+        frame.origin = CGPoint(
+            x: oldMidX - targetSize.width / 2,
+            y: oldMidY - targetSize.height / 2
+        )
 
         if let screen = panel.screen ?? NSScreen.screens.first {
             let clamped = PanelPositioner.clamp(

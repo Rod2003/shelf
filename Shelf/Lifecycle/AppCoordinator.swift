@@ -24,7 +24,6 @@ public final class AppCoordinator {
     private let dragOutSource: DragOutSource
 
     private var viewModels: [ShelfGroupID: ShelfViewModel] = [:]
-    private var expansionCancellables: [ShelfGroupID: AnyCancellable] = [:]
     private var collapsedSizesByShelf: [ShelfGroupID: CGSize] = [:]
 
     public init() {
@@ -100,7 +99,6 @@ public final class AppCoordinator {
         }
         windowManager.onShelfClosed = { [weak self] id in
             self?.viewModels.removeValue(forKey: id)
-            self?.expansionCancellables.removeValue(forKey: id)
             self?.collapsedSizesByShelf.removeValue(forKey: id)
             self?.publishActiveShelvesToMenu()
         }
@@ -132,19 +130,19 @@ public final class AppCoordinator {
                 self?.removeItems(itemIDs, from: shelfID)
             },
             onCollapseRequested: { [weak viewModel] in
-                viewModel?.isExpanded = false
+                viewModel?.setExpanded(false)
             },
             onClose: { [weak self] in
                 self?.windowManager.closeShelf(shelfID)
             }
         )
-        wireExpansionObserver(viewModel, shelfID: shelfID)
         wireDragIn(on: contentView, for: shelf.id)
         let base = PanelPositioner.computeOrigin(
             forCursor: PanelPositioner.liveCursor(),
             screens: PanelPositioner.liveScreens()
         )
         windowManager.openShelf(shelf.id, contentView: contentView, baseOrigin: base)
+        wireWindowAnimation(viewModel, shelfID: shelf.id)
         publishActiveShelvesToMenu()
         log.info("Created new shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
     }
@@ -190,38 +188,31 @@ public final class AppCoordinator {
         if let updated = shelfStore.get(shelfID: shelfID),
            let viewModel = viewModels[shelfID] {
             if updated.items.isEmpty {
-                viewModel.isExpanded = false
+                viewModel.setExpanded(false)
             }
             viewModel.reload(from: updated)
         }
         log.info("Removed \(itemIDs.count, privacy: .public) item(s) from shelf id=\(shelfID.rawValue.uuidString, privacy: .public)")
     }
 
-    private func wireExpansionObserver(_ viewModel: ShelfViewModel, shelfID: ShelfGroupID) {
-        expansionCancellables[shelfID] = viewModel.$isExpanded
-            .removeDuplicates()
-            .dropFirst()
-            .sink { [weak self] expanded in
-                DispatchQueue.main.async {
-                    self?.handleExpansionChange(shelfID: shelfID, expanded: expanded)
-                }
+    private func wireWindowAnimation(_ viewModel: ShelfViewModel, shelfID: ShelfGroupID) {
+        viewModel.animateWindow = { [weak self] expanded, completion in
+            guard
+                let self,
+                let controller = self.windowManager.controller(for: shelfID)
+            else {
+                completion()
+                return
             }
-    }
-
-    private func handleExpansionChange(shelfID: ShelfGroupID, expanded: Bool) {
-        guard let controller = windowManager.controller(for: shelfID) else { return }
-        if expanded {
-            let currentSize = controller.panel.frame.size
-            collapsedSizesByShelf[shelfID] = currentSize
-            controller.setFrameSize(
-                Self.expandedPanelSize,
-                animated: true,
-                bouncy: true
-            )
-        } else {
-            let targetSize = collapsedSizesByShelf.removeValue(forKey: shelfID)
-                ?? ShelfWindowController.defaultPanelSize
-            controller.setFrameSize(targetSize, animated: true, bouncy: true)
+            let targetSize: CGSize
+            if expanded {
+                self.collapsedSizesByShelf[shelfID] = controller.panel.frame.size
+                targetSize = Self.expandedPanelSize
+            } else {
+                targetSize = self.collapsedSizesByShelf.removeValue(forKey: shelfID)
+                    ?? ShelfWindowController.defaultPanelSize
+            }
+            controller.setFrameSize(targetSize, animated: true, completion: completion)
         }
     }
 
@@ -335,7 +326,7 @@ public final class AppCoordinator {
         if let updated = shelfStore.get(shelfID: shelfID),
            let viewModel = viewModels[shelfID] {
             if updated.items.isEmpty {
-                viewModel.isExpanded = false
+                viewModel.setExpanded(false)
             }
             viewModel.reload(from: updated)
         }

@@ -160,7 +160,7 @@ private struct StackedShelfView: View {
                 ShelfPill(
                     label: pillLabel,
                     onToggle: {
-                        viewModel.isExpanded = true
+                        viewModel.setExpanded(true)
                     }
                 )
                 .padding(.horizontal, 14)
@@ -460,7 +460,7 @@ private struct ShelfDrawerView: View {
             let selection = viewModel.drawerSelection
             viewModel.removeAll(itemIDs: selection)
             if viewModel.items.isEmpty {
-                viewModel.isExpanded = false
+                viewModel.setExpanded(false)
             }
             onDeleteItems?(selection)
             return .handled
