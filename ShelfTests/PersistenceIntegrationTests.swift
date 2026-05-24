@@ -56,13 +56,11 @@ final class PersistenceIntegrationTests: XCTestCase {
         let shelf = ShelfGroup(name: "round-trip", items: items)
         let backendA = makeBackend()
         let storeA = backendA.makeShelfStore()
-        storeA.add(shelf)
-        XCTAssertEqual(storeA.all().count, 1)
-        XCTAssertEqual(storeA.get(shelfID: shelf.id), shelf)
+        storeA.set(shelf)
+        XCTAssertEqual(storeA.current(), shelf)
         let backendB = makeBackend()
         let storeB = backendB.makeShelfStore()
-        XCTAssertEqual(storeB.all().count, 1, "exactly one shelf must reload from disk")
-        guard let restored = storeB.get(shelfID: shelf.id) else {
+        guard let restored = storeB.current() else {
             return XCTFail("restored shelf missing from second backend")
         }
         XCTAssertEqual(restored, shelf, "ShelfGroup must be Equatable-equal after roundtrip")
@@ -116,52 +114,56 @@ final class PersistenceIntegrationTests: XCTestCase {
         XCTAssertEqual(decoded.createdAt, createdAt)
         XCTAssertEqual(decoded.lastUsedAt, lastUsedAt)
     }
-    func testCapEvictionDeletesOldestPerShelfKey() {
+    func testSettingShelfReplacesPreviousShelf() {
         let backend = makeBackend()
         let store = backend.makeShelfStore()
         let baseTime = Date(timeIntervalSinceReferenceDate: 1_000_000)
-        var shelves: [ShelfGroup] = []
-        for i in 0..<6 {
-            let s = ShelfGroup(
-                name: "shelf-\(i)",
-                createdAt: baseTime.addingTimeInterval(TimeInterval(i)),
-                lastUsedAt: baseTime.addingTimeInterval(TimeInterval(i))
-            )
-            shelves.append(s)
-            store.add(s)
-        }
+        let first = ShelfGroup(
+            name: "first",
+            createdAt: baseTime,
+            lastUsedAt: baseTime
+        )
+        let second = ShelfGroup(
+            name: "second",
+            createdAt: baseTime.addingTimeInterval(1),
+            lastUsedAt: baseTime.addingTimeInterval(1)
+        )
 
-        XCTAssertEqual(ShelfStore.recentCap, 5, "spec sanity check; cap is 5")
-        XCTAssertEqual(store.all().count, 5, "must enforce cap of 5")
+        store.set(first)
+        store.set(second)
 
-        let oldest = shelves[0]
-        XCTAssertNil(
-            store.get(shelfID: oldest.id),
-            "first-added shelf must be evicted from in-memory state"
-        )
-        let evictedKey = "\(keyPrefix!).shelf.\(oldest.id.rawValue.uuidString)"
-        XCTAssertNil(
-            defaults.data(forKey: evictedKey),
-            "evicted shelf's per-key blob must be deleted from defaults"
-        )
-        for survivor in shelves.suffix(5) {
-            let key = "\(keyPrefix!).shelf.\(survivor.id.rawValue.uuidString)"
-            XCTAssertNotNil(
-                defaults.data(forKey: key),
-                "surviving shelf \(survivor.name) must still have its on-disk key"
-            )
-        }
-        let indexKey = "\(keyPrefix!).index"
-        guard let indexData = defaults.data(forKey: indexKey) else {
-            return XCTFail("index key must exist after add+evict cycle")
-        }
-        let restoredIDs = (try? JSONDecoder().decode([ShelfGroupID].self, from: indexData)) ?? []
-        XCTAssertEqual(restoredIDs.count, 5)
-        XCTAssertFalse(
-            restoredIDs.contains(where: { $0 == oldest.id }),
-            "evicted shelf id must be absent from index"
-        )
+        XCTAssertEqual(store.current(), second)
+        let restored = backend.makeShelfStore()
+        XCTAssertEqual(restored.current(), second)
+        XCTAssertNotNil(defaults.data(forKey: "\(keyPrefix!).shelf"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).index"))
     }
+
+    func testLegacyIndexedShelvesMigrateToSingleShelf() throws {
+        let newer = ShelfGroup(name: "newer")
+        let older = ShelfGroup(name: "older")
+        defaults.set(
+            try JSONEncoder().encode([newer.id, older.id]),
+            forKey: "\(keyPrefix!).index"
+        )
+        defaults.set(
+            try JSONEncoder().encode(newer),
+            forKey: "\(keyPrefix!).shelf.\(newer.id.rawValue.uuidString)"
+        )
+        defaults.set(
+            try JSONEncoder().encode(older),
+            forKey: "\(keyPrefix!).shelf.\(older.id.rawValue.uuidString)"
+        )
+
+        let restored = makeBackend().makeShelfStore()
+
+        XCTAssertEqual(restored.current(), newer)
+        XCTAssertNotNil(defaults.data(forKey: "\(keyPrefix!).shelf"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).index"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(newer.id.rawValue.uuidString)"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(older.id.rawValue.uuidString)"))
+    }
+
     func testEnsureApplicationSupportIsIdempotent() {
         let backend = makeBackend()
         let first = backend.ensureApplicationSupport()
@@ -178,13 +180,13 @@ final class PersistenceIntegrationTests: XCTestCase {
     func testClearAllRemovesAllShelfKeys() {
         let backend = makeBackend()
         let store = backend.makeShelfStore()
-        store.add(ShelfGroup(name: "to-be-cleared"))
-        XCTAssertEqual(store.all().count, 1)
+        store.set(ShelfGroup(name: "to-be-cleared"))
+        XCTAssertNotNil(store.current())
 
         backend.clearAll()
         let backend2 = makeBackend()
         let store2 = backend2.makeShelfStore()
-        XCTAssertEqual(store2.all().count, 0, "clearAll must wipe all on-disk shelves")
+        XCTAssertNil(store2.current(), "clearAll must wipe the on-disk shelf")
         let leftovers = defaults.dictionaryRepresentation().keys
             .filter { $0.hasPrefix("\(keyPrefix!).") }
         XCTAssertTrue(leftovers.isEmpty, "no prefixed keys should remain: \(leftovers)")
@@ -196,9 +198,9 @@ final class PersistenceIntegrationTests: XCTestCase {
         let storeA = backendA.makeShelfStore()
         let storeB = backendB.makeShelfStore()
 
-        storeA.add(ShelfGroup(name: "only-A"))
-        XCTAssertEqual(storeA.all().count, 1)
-        XCTAssertEqual(storeB.all().count, 0, "backend B must not see backend A's shelves")
+        storeA.set(ShelfGroup(name: "only-A"))
+        XCTAssertNotNil(storeA.current())
+        XCTAssertNil(storeB.current(), "backend B must not see backend A's shelf")
     }
 }
 

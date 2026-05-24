@@ -23,8 +23,8 @@ public final class AppCoordinator {
     private let promiseDelegate: FilePromiseDelegate
     private let dragOutSource: DragOutSource
 
-    private var viewModels: [ShelfGroupID: ShelfViewModel] = [:]
-    private var collapsedSizesByShelf: [ShelfGroupID: CGSize] = [:]
+    private var viewModel: ShelfViewModel?
+    private var collapsedSize: CGSize?
 
     public init() {
         self.defaultsBackend = DefaultsBackend()
@@ -55,27 +55,27 @@ public final class AppCoordinator {
     }
 
     private func wireCallbacks() {
-        hotkeyManager.onNewShelf = { [weak self] in
-            self?.createNewShelfAtCursor()
+        hotkeyManager.onShowShelf = { [weak self] in
+            self?.showShelfAtCursor()
         }
         hotkeyManager.onCloseFrontmost = { [weak self] in
             guard let self else { return }
-            guard let id = self.windowManager.currentlyKeyShelf() else { return }
-            self.windowManager.closeShelf(id)
+            guard self.windowManager.isShelfKey() else { return }
+            self.windowManager.closeShelf()
         }
         hotkeyManager.onQuickLook = { [weak self] in
             self?.invokeQuickLookForKeyShelf()
         }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
-            self?.createNewShelfAtCursor()
+            self?.showShelfAtCursor()
         }
 
-        menuBar.onNewShelf = { [weak self] in
-            self?.createNewShelfAtCursor()
+        menuBar.onShowShelf = { [weak self] in
+            self?.showShelfAtCursor()
         }
-        menuBar.onSelectActive = { [weak self] id in
-            self?.windowManager.focusShelf(id)
+        menuBar.onFocusShelf = { [weak self] in
+            self?.windowManager.focusShelf()
         }
         menuBar.onAbout = {
             NSApp.orderFrontStandardAboutPanel(nil)
@@ -85,58 +85,66 @@ public final class AppCoordinator {
         }
 
         // Gate bare Space or it steals Space from every app.
-        windowManager.onShelfBecameKey = { [weak self] _ in
+        windowManager.onShelfBecameKey = { [weak self] in
             guard let self else { return }
             self.hotkeyManager.setEscEnabled(true)
             self.hotkeyManager.setSpaceEnabled(true)
         }
-        windowManager.onShelfResignedKey = { [weak self] _ in
+        windowManager.onShelfResignedKey = { [weak self] in
             guard let self else { return }
-            if self.windowManager.currentlyKeyShelf() == nil {
+            if !self.windowManager.isShelfKey() {
                 self.hotkeyManager.setEscEnabled(false)
                 self.hotkeyManager.setSpaceEnabled(false)
             }
         }
-        windowManager.onShelfClosed = { [weak self] id in
-            self?.viewModels.removeValue(forKey: id)
-            self?.collapsedSizesByShelf.removeValue(forKey: id)
-            self?.publishActiveShelvesToMenu()
+        windowManager.onShelfClosed = { [weak self] in
+            self?.viewModel = nil
+            self?.collapsedSize = nil
+            self?.publishActiveShelfToMenu()
         }
 
         shelfStore.onChange = { [weak self] in
             Task { @MainActor in
-                self?.publishActiveShelvesToMenu()
+                self?.publishActiveShelfToMenu()
             }
         }
     }
 
-    private func createNewShelfAtCursor() {
-        let shelf = ShelfGroup(name: "")
-        shelfStore.add(shelf)
+    private func showShelfAtCursor() {
+        if windowManager.visibleShelfCount > 0 {
+            windowManager.focusShelf()
+            log.debug("Focused existing shelf")
+            return
+        }
+
+        let existingShelf = shelfStore.current()
+        let shelf = existingShelf ?? ShelfGroup(name: "")
+        if existingShelf == nil {
+            shelfStore.set(shelf)
+        }
         let viewModel = ShelfViewModel(shelf: shelf)
-        viewModels[shelf.id] = viewModel
-        let shelfID = shelf.id
+        self.viewModel = viewModel
         let contentView = ContentViewFactory.makeContentView(
             viewModel: viewModel,
             resolver: bookmarkResolver,
             thumbnailService: thumbnailService,
             onSingleDragEnded: { [weak self] result in
-                self?.handleDragOutEnded(result, fromShelf: shelfID)
+                self?.handleDragOutEnded(result)
             },
             onMultiDragEnded: { [weak self] result in
-                self?.handleMultiDragOutEnded(result, fromShelf: shelfID)
+                self?.handleMultiDragOutEnded(result)
             },
             onDeleteItems: { [weak self] itemIDs in
-                self?.removeItems(itemIDs, from: shelfID)
+                self?.removeItems(itemIDs)
             },
             onDropItems: { [weak self] items in
-                self?.appendItems(items, to: shelfID)
+                self?.appendItems(items)
             },
             onCollapseRequested: { [weak viewModel] in
                 viewModel?.setExpanded(false)
             },
             onClose: { [weak self] in
-                self?.windowManager.closeShelf(shelfID)
+                self?.windowManager.closeShelf()
             }
         )
         let base = PanelPositioner.computeOrigin(
@@ -148,61 +156,57 @@ public final class AppCoordinator {
             contentView: contentView,
             baseOrigin: base
         )
-        wireWindowAnimation(viewModel, shelfID: shelf.id)
-        publishActiveShelvesToMenu()
-        log.info("Created new shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
+        wireWindowAnimation(viewModel)
+        publishActiveShelfToMenu()
+        log.info("Showed shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
     }
 
-    private func publishActiveShelvesToMenu() {
-        let openIDs = Set(windowManager.openShelfIDs())
-        let openShelves = shelfStore.all().filter { openIDs.contains($0.id) }
-        menuBar.activeShelves = openShelves.sorted { $0.createdAt > $1.createdAt }
+    private func publishActiveShelfToMenu() {
+        menuBar.activeShelf = windowManager.visibleShelfCount > 0 ? shelfStore.current() : nil
     }
 
-    private func appendItems(_ items: [ShelfItem], to shelfID: ShelfGroupID) {
-        shelfStore.update(shelfID: shelfID) { shelf in
+    private func appendItems(_ items: [ShelfItem]) {
+        shelfStore.update { shelf in
             shelf.items.insert(contentsOf: items, at: 0)
             shelf.lastUsedAt = Date()
         }
-        if let updated = shelfStore.get(shelfID: shelfID),
-           let viewModel = viewModels[shelfID] {
+        if let updated = shelfStore.current(),
+           let viewModel {
             viewModel.reload(from: updated)
         }
-        log.info("Appended \(items.count, privacy: .public) item(s) to shelf id=\(shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Appended \(items.count, privacy: .public) item(s) to shelf")
     }
 
-    private func removeItems(_ itemIDs: Set<ItemID>, from shelfID: ShelfGroupID) {
+    private func removeItems(_ itemIDs: Set<ItemID>) {
         guard !itemIDs.isEmpty else { return }
-        shelfStore.update(shelfID: shelfID) { shelf in
+        shelfStore.update { shelf in
             shelf.items.removeAll { itemIDs.contains($0.id) }
             shelf.lastUsedAt = Date()
         }
-        if let updated = shelfStore.get(shelfID: shelfID),
-           let viewModel = viewModels[shelfID] {
+        if let updated = shelfStore.current(),
+           let viewModel {
             if updated.items.isEmpty {
                 viewModel.setExpanded(false)
             }
             viewModel.reload(from: updated)
         }
-        log.info("Removed \(itemIDs.count, privacy: .public) item(s) from shelf id=\(shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Removed \(itemIDs.count, privacy: .public) item(s) from shelf")
     }
 
-    private func wireWindowAnimation(_ viewModel: ShelfViewModel, shelfID: ShelfGroupID) {
+    private func wireWindowAnimation(_ viewModel: ShelfViewModel) {
         viewModel.animateWindow = { [weak self] expanded, duration, completion in
-            guard
-                let self,
-                let controller = self.windowManager.controller(for: shelfID)
-            else {
+            guard let self, let controller = self.windowManager.shelfController() else {
                 completion()
                 return
             }
             let targetSize: CGSize
             if expanded {
-                self.collapsedSizesByShelf[shelfID] = controller.panel.frame.size
+                self.collapsedSize = controller.panel.frame.size
                 targetSize = Self.expandedPanelSize
             } else {
-                targetSize = self.collapsedSizesByShelf.removeValue(forKey: shelfID)
+                targetSize = self.collapsedSize
                     ?? ShelfWindowController.defaultPanelSize
+                self.collapsedSize = nil
             }
             controller.setFrameSize(
                 targetSize,
@@ -214,17 +218,17 @@ public final class AppCoordinator {
     }
 
     private func invokeQuickLookForKeyShelf() {
-        guard let id = windowManager.currentlyKeyShelf() else {
+        guard windowManager.isShelfKey() else {
             log.debug("Quick Look skipped: no key shelf")
             return
         }
-        guard let viewModel = viewModels[id] else {
-            log.debug("Quick Look skipped: no view model for shelf id=\(id.rawValue.uuidString, privacy: .public)")
+        guard let viewModel else {
+            log.debug("Quick Look skipped: no view model")
             return
         }
         let targetItem = viewModel.quickLookTargetItem
         guard let item = targetItem else {
-            log.debug("Quick Look skipped: shelf id=\(id.rawValue.uuidString, privacy: .public) has no items")
+            log.debug("Quick Look skipped: shelf has no items")
             return
         }
 
@@ -255,7 +259,7 @@ public final class AppCoordinator {
         }
     }
 
-    private func handleDragOutEnded(_ result: DragOutResult, fromShelf shelfID: ShelfGroupID) {
+    private func handleDragOutEnded(_ result: DragOutResult) {
         let operation = result.operation
         let itemID = result.itemID
 
@@ -264,8 +268,8 @@ public final class AppCoordinator {
             return
         }
 
-        guard let shelf = shelfStore.get(shelfID: shelfID) else {
-            log.warning("Drag-out: shelf id=\(shelfID.rawValue.uuidString, privacy: .public) not found in store")
+        guard let shelf = shelfStore.current() else {
+            log.warning("Drag-out: shelf not found in store")
             return
         }
         guard let item = shelf.items.first(where: { $0.id == itemID }) else {
@@ -277,12 +281,12 @@ public final class AppCoordinator {
 
         if isConfirmedMove {
             deleteOriginalFile(for: item)
-            shelfStore.update(shelfID: shelfID) { shelf in
+            shelfStore.update { shelf in
                 shelf.items.removeAll { $0.id == itemID }
                 shelf.lastUsedAt = Date()
             }
-            if let updated = shelfStore.get(shelfID: shelfID),
-               let viewModel = viewModels[shelfID] {
+            if let updated = shelfStore.current(),
+               let viewModel {
                 viewModel.reload(from: updated)
             }
             log.info(
@@ -295,13 +299,13 @@ public final class AppCoordinator {
         }
     }
 
-    private func handleMultiDragOutEnded(_ result: MultiDragOutResult, fromShelf shelfID: ShelfGroupID) {
+    private func handleMultiDragOutEnded(_ result: MultiDragOutResult) {
         guard !result.operation.isEmpty else {
-            log.debug("Multi drag-out cancelled for shelf id=\(shelfID.rawValue.uuidString, privacy: .public)")
+            log.debug("Multi drag-out cancelled")
             return
         }
-        guard let shelf = shelfStore.get(shelfID: shelfID) else {
-            log.warning("Multi drag-out: shelf id=\(shelfID.rawValue.uuidString, privacy: .public) not found in store")
+        guard let shelf = shelfStore.current() else {
+            log.warning("Multi drag-out: shelf not found in store")
             return
         }
 
@@ -316,18 +320,18 @@ public final class AppCoordinator {
         for item in shelf.items where confirmedIDs.contains(item.id) {
             deleteOriginalFile(for: item)
         }
-        shelfStore.update(shelfID: shelfID) { shelf in
+        shelfStore.update { shelf in
             shelf.items.removeAll { confirmedIDs.contains($0.id) }
             shelf.lastUsedAt = Date()
         }
-        if let updated = shelfStore.get(shelfID: shelfID),
-           let viewModel = viewModels[shelfID] {
+        if let updated = shelfStore.current(),
+           let viewModel {
             if updated.items.isEmpty {
                 viewModel.setExpanded(false)
             }
             viewModel.reload(from: updated)
         }
-        log.info("Multi drag-out removed \(confirmedIDs.count, privacy: .public) confirmed item(s) from shelf id=\(shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Multi drag-out removed \(confirmedIDs.count, privacy: .public) confirmed item(s) from shelf")
     }
 
     private func deleteOriginalFile(for item: ShelfItem) {
@@ -367,7 +371,7 @@ public final class AppCoordinator {
 
         var liveItemDirs: Set<String> = []
         var liveClipboardFiles: Set<String> = []
-        for shelf in shelfStore.all() {
+        if let shelf = shelfStore.current() {
             for item in shelf.items {
                 switch item.kind {
                 case .fileBookmark:

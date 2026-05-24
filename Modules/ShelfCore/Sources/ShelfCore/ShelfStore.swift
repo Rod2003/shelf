@@ -1,98 +1,59 @@
 import Foundation
 
 public final class ShelfStore: @unchecked Sendable {
-    // Keep every shelves/order access under `lock`; `onChange` fires after unlock.
-
-    public static let recentCap: Int = 5
+    // Keep shelf access under `lock`; `onChange` fires after unlock.
 
     public var onChange: (() -> Void)?
 
     private let backend: ShelfStoreBackend
     private let lock = NSLock()
-    private var shelves: [ShelfGroupID: ShelfGroup] = [:]
-    private var order: [ShelfGroupID] = []
+    private var shelf: ShelfGroup?
 
     public init(backend: ShelfStoreBackend) {
         self.backend = backend
         loadFromBackend()
     }
 
-    public func add(_ shelf: ShelfGroup) {
+    public func set(_ shelf: ShelfGroup) {
         lock.lock()
-        if shelves[shelf.id] != nil {
-            shelves[shelf.id] = shelf
-            order.removeAll { $0 == shelf.id }
-            order.insert(shelf.id, at: 0)
-            persistShelf(shelf)
-            persistIndex()
-        } else {
-            shelves[shelf.id] = shelf
-            order.insert(shelf.id, at: 0)
-            persistShelf(shelf)
-            while order.count > Self.recentCap {
-                let evicted = order.removeLast()
-                shelves.removeValue(forKey: evicted)
-                deleteShelfKey(evicted)
-            }
-            persistIndex()
-        }
-        lock.unlock()
-        onChange?()
-    }
-
-    public func remove(shelfID: ShelfGroupID) {
-        lock.lock()
-        guard shelves.removeValue(forKey: shelfID) != nil else {
-            lock.unlock()
-            return
-        }
-        order.removeAll { $0 == shelfID }
-        deleteShelfKey(shelfID)
-        persistIndex()
-        lock.unlock()
-        onChange?()
-    }
-
-    public func move(shelfID: ShelfGroupID, toIndex: Int) {
-        lock.lock()
-        guard let currentIndex = order.firstIndex(of: shelfID) else {
-            lock.unlock()
-            return
-        }
-        order.remove(at: currentIndex)
-        let clamped = max(0, min(toIndex, order.count))
-        order.insert(shelfID, at: clamped)
-        persistIndex()
-        lock.unlock()
-        onChange?()
-    }
-
-    public func get(shelfID: ShelfGroupID) -> ShelfGroup? {
-        lock.lock()
-        defer { lock.unlock() }
-        return shelves[shelfID]
-    }
-
-    public func all() -> [ShelfGroup] {
-        lock.lock()
-        defer { lock.unlock() }
-        return order.compactMap { shelves[$0] }
-    }
-
-    public func update(shelfID: ShelfGroupID, mutate: (inout ShelfGroup) -> Void) {
-        lock.lock()
-        guard let original = shelves[shelfID] else {
-            lock.unlock()
-            return
-        }
-        var shelf = original
-        mutate(&shelf)
-        guard shelf != original else {
-            lock.unlock()
-            return
-        }
-        shelves[shelfID] = shelf
+        self.shelf = shelf
         persistShelf(shelf)
+        lock.unlock()
+        onChange?()
+    }
+
+    public func remove() {
+        lock.lock()
+        guard shelf != nil else {
+            lock.unlock()
+            return
+        }
+        shelf = nil
+        deleteShelf()
+        lock.unlock()
+        onChange?()
+    }
+
+    public func current() -> ShelfGroup? {
+        lock.lock()
+        defer { lock.unlock() }
+        return shelf
+    }
+
+    public func update(mutate: (inout ShelfGroup) -> Void) {
+        lock.lock()
+        guard let original = shelf else {
+            lock.unlock()
+            return
+        }
+        var updated = original
+        mutate(&updated)
+        guard updated != original else {
+            lock.unlock()
+            return
+        }
+        shelf = updated
+        persistShelf(updated)
         lock.unlock()
         onChange?()
     }
@@ -102,46 +63,59 @@ public final class ShelfStore: @unchecked Sendable {
         case .inMemory:
             return
         case let .userDefaults(defaults, prefix):
-            guard let data = defaults.data(forKey: indexKey(prefix: prefix)) else {
+            if let data = defaults.data(forKey: shelfKey(prefix: prefix)),
+               let decoded = try? JSONDecoder().decode(ShelfGroup.self, from: data) {
+                self.shelf = decoded
                 return
             }
-            guard let ids = try? JSONDecoder().decode([ShelfGroupID].self, from: data) else { return }
-            var loadedOrder: [ShelfGroupID] = []
-            var loadedShelves: [ShelfGroupID: ShelfGroup] = [:]
-            for id in ids {
-                let key = shelfKey(prefix: prefix, id: id)
-                guard let shelfData = defaults.data(forKey: key) else { continue }
-                guard let shelf = try? JSONDecoder().decode(ShelfGroup.self, from: shelfData) else { continue }
-                loadedOrder.append(id)
-                loadedShelves[id] = shelf
-            }
-            self.order = loadedOrder
-            self.shelves = loadedShelves
+
+            migrateLegacyIndexedShelf(defaults: defaults, prefix: prefix)
         }
     }
 
-    private func persistIndex() {
-        guard case let .userDefaults(defaults, prefix) = backend else { return }
-        guard let data = try? JSONEncoder().encode(order) else { return }
-        defaults.set(data, forKey: indexKey(prefix: prefix))
+    private func migrateLegacyIndexedShelf(defaults: UserDefaults, prefix: String) {
+        guard let data = defaults.data(forKey: legacyIndexKey(prefix: prefix)) else {
+            return
+        }
+        defer { defaults.removeObject(forKey: legacyIndexKey(prefix: prefix)) }
+
+        guard let ids = try? JSONDecoder().decode([ShelfGroupID].self, from: data) else { return }
+        var migratedShelf: ShelfGroup?
+        for id in ids {
+            let key = legacyShelfKey(prefix: prefix, id: id)
+            defer { defaults.removeObject(forKey: key) }
+            guard migratedShelf == nil else { continue }
+            guard let shelfData = defaults.data(forKey: key) else { continue }
+            guard let shelf = try? JSONDecoder().decode(ShelfGroup.self, from: shelfData) else { continue }
+            migratedShelf = shelf
+        }
+
+        if let migratedShelf {
+            self.shelf = migratedShelf
+            persistShelf(migratedShelf)
+        }
     }
 
     private func persistShelf(_ shelf: ShelfGroup) {
         guard case let .userDefaults(defaults, prefix) = backend else { return }
         guard let data = try? JSONEncoder().encode(shelf) else { return }
-        defaults.set(data, forKey: shelfKey(prefix: prefix, id: shelf.id))
+        defaults.set(data, forKey: shelfKey(prefix: prefix))
     }
 
-    private func deleteShelfKey(_ id: ShelfGroupID) {
+    private func deleteShelf() {
         guard case let .userDefaults(defaults, prefix) = backend else { return }
-        defaults.removeObject(forKey: shelfKey(prefix: prefix, id: id))
+        defaults.removeObject(forKey: shelfKey(prefix: prefix))
     }
 
-    private func indexKey(prefix: String) -> String {
+    private func shelfKey(prefix: String) -> String {
+        "\(prefix).shelf"
+    }
+
+    private func legacyIndexKey(prefix: String) -> String {
         "\(prefix).index"
     }
 
-    private func shelfKey(prefix: String, id: ShelfGroupID) -> String {
+    private func legacyShelfKey(prefix: String, id: ShelfGroupID) -> String {
         "\(prefix).shelf.\(id.rawValue.uuidString)"
     }
 }
