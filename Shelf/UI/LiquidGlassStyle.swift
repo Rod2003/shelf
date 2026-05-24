@@ -100,30 +100,6 @@ struct ShelfGlassPillBackground: ViewModifier {
     }
 }
 
-struct ShelfGlassCardBackground: ViewModifier {
-    let id: String
-    let namespace: Namespace.ID
-
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .padding(5)
-                .glassEffect(.regular, in: .rect(cornerRadius: 10))
-                .glassEffectID(id, in: namespace)
-                .glassEffectTransition(.matchedGeometry)
-        } else {
-            content
-                .padding(5)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.separator.opacity(0.45), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.24), radius: 7, x: 0, y: 4)
-        }
-    }
-}
-
 struct ShelfGlassItemBackground: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
