@@ -254,6 +254,15 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
 
     public override var mouseDownCanMoveWindow: Bool { false }
 
+    public override func hitTest(_ point: NSPoint) -> NSView? {
+        switch NSApp.currentEvent?.type {
+        case .leftMouseDown, .leftMouseDragged, .leftMouseUp:
+            return bounds.contains(point) ? self : nil
+        default:
+            return super.hitTest(point)
+        }
+    }
+
     public override var intrinsicContentSize: NSSize {
         guard let hosting = hostingView else { return super.intrinsicContentSize }
         let size = hosting.intrinsicContentSize

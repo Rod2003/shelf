@@ -43,7 +43,8 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.titlebarAppearsTransparent = true
         panel.titleVisibility = .hidden
         panel.isMovable = true
-        panel.isMovableByWindowBackground = true
+        // Drag only via explicit WindowDragHandle regions.
+        panel.isMovableByWindowBackground = false
 
         panel.isOpaque = false
         panel.backgroundColor = .clear
