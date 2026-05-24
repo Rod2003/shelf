@@ -132,6 +132,9 @@ public struct ShelfContentView: View {
 }
 
 private struct StackedShelfView: View {
+    private static let pillBottomPadding: CGFloat = 12
+    private static let pillHorizontalPadding: CGFloat = 14
+
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let namespace: Namespace.ID
@@ -144,7 +147,7 @@ private struct StackedShelfView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        ZStack(alignment: .bottom) {
             if let top = viewModel.items.first {
                 DragOutCellWrapper(
                     item: top,
@@ -159,18 +162,21 @@ private struct StackedShelfView: View {
                         namespace: namespace
                     )
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
-            if !viewModel.isExpanded {
+            if viewModel.showsCollapsedPill {
                 ShelfPill(
                     label: pillLabel,
                     onToggle: {
                         viewModel.setExpanded(true)
                     }
                 )
-                .padding(.horizontal, 14)
+                .padding(.horizontal, Self.pillHorizontalPadding)
+                .padding(.bottom, Self.pillBottomPadding)
+                .transition(.opacity)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

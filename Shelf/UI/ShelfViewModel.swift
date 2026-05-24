@@ -5,6 +5,7 @@ import ShelfCore
 
 public enum ShelfAnimation {
     public static let expansion: Animation = .timingCurve(0.32, 0.94, 0.36, 1.0, duration: 0.32)
+    public static let pillFade: Animation = .easeOut(duration: 0.08)
 }
 
 @MainActor
@@ -14,6 +15,7 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var items: [ShelfItem]
     @Published public var selectedItemID: ItemID?
     @Published public var isExpanded: Bool
+    @Published public private(set) var showsCollapsedPill: Bool
     @Published public var drawerSelection: Set<ItemID>
     @Published public var drawerActiveSelectionID: ItemID?
 
@@ -28,6 +30,7 @@ public final class ShelfViewModel: ObservableObject {
         self.items = shelf.items
         self.selectedItemID = nil
         self.isExpanded = false
+        self.showsCollapsedPill = true
         self.drawerSelection = []
         self.drawerActiveSelectionID = nil
     }
@@ -36,14 +39,28 @@ public final class ShelfViewModel: ObservableObject {
         guard isExpanded != expanded else { return }
         let curve = ShelfAnimation.expansion
         guard let animateWindow else {
-            withAnimation(curve) { isExpanded = expanded }
+            if expanded {
+                withAnimation(ShelfAnimation.pillFade) {
+                    showsCollapsedPill = false
+                } completion: {
+                    withAnimation(curve) { self.isExpanded = true }
+                }
+            } else {
+                withAnimation(curve) {
+                    isExpanded = false
+                } completion: {
+                    withAnimation(ShelfAnimation.pillFade) { self.showsCollapsedPill = true }
+                }
+            }
             return
         }
         if expanded {
-            // Phase 1: grow the window with the stack still rendered.
-            // Phase 2: flip state so matched-geometry disperses items into the grid.
-            animateWindow(true) { [weak self] in
-                withAnimation(curve) { self?.isExpanded = true }
+            withAnimation(ShelfAnimation.pillFade) {
+                showsCollapsedPill = false
+            } completion: {
+                animateWindow(true) { [weak self] in
+                    withAnimation(curve) { self?.isExpanded = true }
+                }
             }
         } else {
             // Phase 1: matched-geometry gathers items back into the stack.
@@ -51,7 +68,9 @@ public final class ShelfViewModel: ObservableObject {
             withAnimation(curve) {
                 isExpanded = false
             } completion: {
-                animateWindow(false) { }
+                animateWindow(false) { [weak self] in
+                    withAnimation(ShelfAnimation.pillFade) { self?.showsCollapsedPill = true }
+                }
             }
         }
     }
