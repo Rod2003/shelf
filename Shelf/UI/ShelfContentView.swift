@@ -579,13 +579,29 @@ private struct ShelfDrawerView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(viewModel.items, id: \.id) { item in
-                    ShelfItemView(
+                    DragOutCellWrapper(
                         item: item,
-                        isSelected: viewModel.drawerSelection.contains(item.id),
-                        resolver: resolver,
-                        thumbnailService: thumbnailService,
-                        showsDisplayName: !viewModel.hidesDrawerLabels
-                    )
+                        onTapWithModifiers: { modifiers in
+                            handleClick(itemID: item.id, modifiers: modifiers)
+                        },
+                        onDragEnded: { onSingleDragEnded?($0) },
+                        multiItemsProvider: {
+                            if viewModel.drawerSelection.contains(item.id) {
+                                return viewModel.items.filter { viewModel.drawerSelection.contains($0.id) }
+                            }
+                            viewModel.selectOnly(item.id)
+                            return [item]
+                        },
+                        onMultiDragEnded: { onMultiDragEnded?($0) }
+                    ) {
+                        ShelfItemView(
+                            item: item,
+                            isSelected: viewModel.drawerSelection.contains(item.id),
+                            resolver: resolver,
+                            thumbnailService: thumbnailService,
+                            showsDisplayName: !viewModel.hidesDrawerLabels
+                        )
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(
@@ -594,28 +610,8 @@ private struct ShelfDrawerView: View {
                                     : Color.accentColor.opacity(0.55),
                                 lineWidth: viewModel.drawerSelection.contains(item.id) ? 2 : 0
                             )
+                            .allowsHitTesting(false)
                     )
-                    .overlay {
-                        DragOutCellWrapper(
-                            item: item,
-                            onTapWithModifiers: { modifiers in
-                                handleClick(itemID: item.id, modifiers: modifiers)
-                            },
-                            onDragEnded: { onSingleDragEnded?($0) },
-                            multiItemsProvider: {
-                                if viewModel.drawerSelection.contains(item.id) {
-                                    return viewModel.items.filter { viewModel.drawerSelection.contains($0.id) }
-                                }
-                                viewModel.selectOnly(item.id)
-                                return [item]
-                            },
-                            onMultiDragEnded: { onMultiDragEnded?($0) }
-                        ) {
-                            Color.clear
-                                .contentShape(Rectangle())
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
                 }
             }
             .padding(.horizontal, 14)
