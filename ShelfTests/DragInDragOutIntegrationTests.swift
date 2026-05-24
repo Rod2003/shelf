@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import XCTest
 
 @testable import Shelf
@@ -34,6 +35,21 @@ final class DragInDragOutIntegrationTests: XCTestCase {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         createdFiles.append(url)
         return url
+    }
+    private func makePNGData() throws -> Data {
+        let image = NSImage(size: CGSize(width: 2, height: 2))
+        image.lockFocus()
+        NSColor.systemBlue.setFill()
+        NSRect(x: 0, y: 0, width: 2, height: 2).fill()
+        image.unlockFocus()
+        guard
+            let tiff = image.tiffRepresentation,
+            let rep = NSBitmapImageRep(data: tiff),
+            let png = rep.representation(using: .png, properties: [:])
+        else {
+            throw XCTSkip("Could not create test PNG data")
+        }
+        return png
     }
     func testFileURLPrecedenceOverString() throws {
         let file = try makeTempFile(name: "precedence.txt")
@@ -155,6 +171,41 @@ final class DragInDragOutIntegrationTests: XCTestCase {
     func testEmptyPasteboardYieldsNoItems() {
         let pb = makeIsolatedPasteboard()
         let items = DragItemFactory.makeItems(from: pb)
+        XCTAssertEqual(items.count, 0)
+    }
+    func testSwiftUIDropFileURLPrecedenceOverString() async throws {
+        let file = try makeTempFile(name: "provider-precedence.txt")
+        let fileProvider = NSItemProvider(object: file as NSURL)
+        let textProvider = NSItemProvider(object: "not the right item" as NSString)
+
+        let items = await DragItemFactory.makeItems(from: [textProvider, fileProvider])
+
+        XCTAssertEqual(items.count, 1)
+        guard case let .fileBookmark(record) = items[0].kind else {
+            return XCTFail("expected .fileBookmark, got \(items[0].kind)")
+        }
+        XCTAssertEqual(record.originalPath, file.path)
+    }
+    func testSwiftUIDropImageDataProducesClipboardImageItem() async throws {
+        let data = try makePNGData()
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(
+            forTypeIdentifier: UTType.png.identifier,
+            visibility: .all
+        ) { completion in
+            completion(data, nil)
+            return nil
+        }
+
+        let items = await DragItemFactory.makeItems(from: [provider])
+
+        XCTAssertEqual(items.count, 1)
+        guard case .clipboardImage = items[0].kind else {
+            return XCTFail("expected .clipboardImage, got \(items[0].kind)")
+        }
+    }
+    func testSwiftUIDropUnsupportedProviderYieldsNoItems() async {
+        let items = await DragItemFactory.makeItems(from: [NSItemProvider()])
         XCTAssertEqual(items.count, 0)
     }
     func testMailtoURLAloneYieldsNoWebURLItem() {

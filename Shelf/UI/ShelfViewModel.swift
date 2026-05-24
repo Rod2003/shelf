@@ -4,7 +4,10 @@ import SwiftUI
 import ShelfCore
 
 public enum ShelfAnimation {
+    public static let expansionDuration: TimeInterval = 0.32
+    public static let collapseDuration: TimeInterval = 0.48
     public static let expansion: Animation = .timingCurve(0.32, 0.94, 0.36, 1.0, duration: 0.32)
+    public static let collapse: Animation = .timingCurve(0.22, 0.88, 0.24, 1.0, duration: 0.48)
     public static let pillFade: Animation = .easeOut(duration: 0.08)
 }
 
@@ -16,13 +19,12 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var selectedItemID: ItemID?
     @Published public var isExpanded: Bool
     @Published public private(set) var showsCollapsedPill: Bool
+    @Published public private(set) var hidesDrawerLabels: Bool
     @Published public var drawerSelection: Set<ItemID>
     @Published public var drawerActiveSelectionID: ItemID?
+    @Published public var isDropTargeted: Bool
 
-    /// Animates the panel between collapsed and expanded sizes. Invoked by
-    /// `setExpanded` to sequence the window resize and the SwiftUI content
-    /// animation so they don't fight each other. Wired in by AppCoordinator.
-    public var animateWindow: ((_ expanded: Bool, _ completion: @escaping () -> Void) -> Void)?
+    public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
     public init(shelf: ShelfGroup) {
         self.shelfID = shelf.id
@@ -31,47 +33,56 @@ public final class ShelfViewModel: ObservableObject {
         self.selectedItemID = nil
         self.isExpanded = false
         self.showsCollapsedPill = true
+        self.hidesDrawerLabels = false
         self.drawerSelection = []
         self.drawerActiveSelectionID = nil
+        self.isDropTargeted = false
     }
 
     public func setExpanded(_ expanded: Bool) {
         guard isExpanded != expanded else { return }
-        let curve = ShelfAnimation.expansion
         guard let animateWindow else {
             if expanded {
+                hidesDrawerLabels = false
                 withAnimation(ShelfAnimation.pillFade) {
                     showsCollapsedPill = false
                 } completion: {
-                    withAnimation(curve) { self.isExpanded = true }
+                    withAnimation(ShelfAnimation.expansion) { self.isExpanded = true }
                 }
             } else {
-                withAnimation(curve) {
+                hidesDrawerLabels = true
+                withAnimation(ShelfAnimation.collapse) {
+                    showsCollapsedPill = true
                     isExpanded = false
                 } completion: {
-                    withAnimation(ShelfAnimation.pillFade) { self.showsCollapsedPill = true }
+                    self.hidesDrawerLabels = false
                 }
             }
             return
         }
         if expanded {
-            withAnimation(ShelfAnimation.pillFade) {
+            hidesDrawerLabels = false
+            withAnimation(ShelfAnimation.expansion) {
                 showsCollapsedPill = false
-            } completion: {
-                animateWindow(true) { [weak self] in
-                    withAnimation(curve) { self?.isExpanded = true }
-                }
+                isExpanded = true
             }
+            animateWindow(true, ShelfAnimation.expansionDuration) {}
         } else {
-            // Phase 1: matched-geometry gathers items back into the stack.
-            // Phase 2: shrink the window once the gather animation has finished.
-            withAnimation(curve) {
+            hidesDrawerLabels = true
+            withAnimation(ShelfAnimation.collapse) {
+                showsCollapsedPill = true
                 isExpanded = false
-            } completion: {
-                animateWindow(false) { [weak self] in
-                    withAnimation(ShelfAnimation.pillFade) { self?.showsCollapsedPill = true }
-                }
             }
+            animateWindow(false, ShelfAnimation.collapseDuration) { [weak self] in
+                self?.hidesDrawerLabels = false
+            }
+        }
+    }
+
+    public func setDropTargeted(_ targeted: Bool) {
+        guard isDropTargeted != targeted else { return }
+        withAnimation(.easeOut(duration: 0.12)) {
+            isDropTargeted = targeted
         }
     }
 

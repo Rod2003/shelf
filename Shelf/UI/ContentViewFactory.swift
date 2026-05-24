@@ -11,6 +11,7 @@ public enum ContentViewFactory {
         onSingleDragEnded: ((DragOutResult) -> Void)? = nil,
         onMultiDragEnded: ((MultiDragOutResult) -> Void)? = nil,
         onDeleteItems: ((Set<ItemID>) -> Void)? = nil,
+        onDropItems: (([ShelfItem]) -> Void)? = nil,
         onCollapseRequested: (() -> Void)? = nil,
         onClose: (() -> Void)? = nil
     ) -> NSView {
@@ -22,23 +23,14 @@ public enum ContentViewFactory {
                 onSingleDragEnded: onSingleDragEnded,
                 onMultiDragEnded: onMultiDragEnded,
                 onDeleteItems: onDeleteItems,
+                onDropItems: onDropItems,
                 onCollapseRequested: onCollapseRequested,
                 onClose: onClose
             )
         )
         hosting.autoresizingMask = [.width, .height]
-
-        let wrapper = NSVisualEffectView()
-        wrapper.material = .hudWindow
-        wrapper.blendingMode = .behindWindow
-        wrapper.state = .active
-        wrapper.wantsLayer = true
-        wrapper.layer?.cornerRadius = 22
-        wrapper.layer?.masksToBounds = true
-        wrapper.translatesAutoresizingMaskIntoConstraints = true
-        wrapper.autoresizingMask = [.width, .height]
-        wrapper.addSubview(hosting)
-        hosting.frame = wrapper.bounds
-        return wrapper
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        return hosting
     }
 }

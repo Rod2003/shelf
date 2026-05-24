@@ -5,6 +5,8 @@ public struct ShelfItemView: View {
     public let isSelected: Bool
     public let resolver: BookmarkResolver?
     public let thumbnailService: ThumbnailService?
+    public let thumbnailNamespace: Namespace.ID?
+    public let showsDisplayName: Bool
 
     @State private var thumbnail: NSImage?
     @State private var isMissing: Bool = false
@@ -14,38 +16,32 @@ public struct ShelfItemView: View {
         item: ShelfItem,
         isSelected: Bool = false,
         resolver: BookmarkResolver? = nil,
-        thumbnailService: ThumbnailService? = nil
+        thumbnailService: ThumbnailService? = nil,
+        thumbnailNamespace: Namespace.ID? = nil,
+        showsDisplayName: Bool = true
     ) {
         self.item = item
         self.isSelected = isSelected
         self.resolver = resolver
         self.thumbnailService = thumbnailService
+        self.thumbnailNamespace = thumbnailNamespace
+        self.showsDisplayName = showsDisplayName
     }
 
     public var body: some View {
         VStack(spacing: 4) {
-            ZStack(alignment: .topTrailing) {
-                thumbnailView
-                    .frame(width: 64, height: 64)
-                if isMissing {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .background(Circle().fill(.background))
-                        .help("File no longer available")
-                }
-            }
+            thumbnailContainer
             Text(item.displayName)
                 .font(.caption)
                 .lineLimit(2)
                 .truncationMode(.middle)
                 .multilineTextAlignment(.center)
+                .opacity(showsDisplayName ? 1 : 0)
+                .animation(nil, value: showsDisplayName)
         }
         .frame(width: 96)
         .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(backgroundFill)
-        )
+        .modifier(ShelfGlassItemBackground(isSelected: isSelected, isHovering: isHovering))
         .onHover { hovering in
             isHovering = hovering
         }
@@ -54,15 +50,37 @@ public struct ShelfItemView: View {
             await loadThumbnailIfNeeded()
         }
     }
-    private var backgroundFill: Color {
-        if isSelected { return Color.accentColor.opacity(0.3) }
-        if isHovering { return Color.primary.opacity(0.06) }
-        return .clear
-    }
     private var helpText: String {
         if isMissing { return "\(item.displayName) — file no longer available" }
         return item.displayName
     }
+
+    @ViewBuilder
+    private var thumbnailContainer: some View {
+        let content = ZStack(alignment: .topTrailing) {
+            thumbnailView
+                .frame(width: 64, height: 64)
+            if isMissing {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .background(Circle().fill(.background))
+                    .help("File no longer available")
+            }
+        }
+        .frame(width: 64, height: 64)
+
+        if let thumbnailNamespace {
+            content
+                .matchedGeometryEffect(
+                    id: item.id,
+                    in: thumbnailNamespace,
+                    isSource: false
+                )
+        } else {
+            content
+        }
+    }
+
     @ViewBuilder
     private var thumbnailView: some View {
         if let img = thumbnail {
@@ -92,20 +110,53 @@ public struct ShelfItemView: View {
         }
     }
     private func loadThumbnailIfNeeded() async {
-        guard
-            case .fileBookmark(let record) = item.kind,
-            let resolver = resolver,
-            let service = thumbnailService
-        else {
+        switch item.kind {
+        case .fileBookmark(let record):
+            guard let resolver, let service = thumbnailService else { return }
+            do {
+                let resolution = try resolver.resolve(record)
+                let image = await service.thumbnail(for: resolution.url)
+                resolver.release(resolution.url)
+                thumbnail = image
+            } catch {
+                isMissing = true
+            }
+
+        case .clipboardImage(let filename):
+            guard let url = clipboardImageURL(filename: filename),
+                  let image = sourceImageIfAvailable(for: url) else {
+                return
+            }
+            thumbnail = image
+
+        case .webURL, .text:
             return
         }
-        do {
-            let resolution = try resolver.resolve(record)
-            let image = await service.thumbnail(for: resolution.url)
-            resolver.release(resolution.url)
-            thumbnail = image
-        } catch {
-            isMissing = true
+    }
+
+    private func sourceImageIfAvailable(for url: URL) -> NSImage? {
+        guard
+            let data = try? Data(contentsOf: url),
+            let image = NSImage(data: data),
+            image.size.width > 0,
+            image.size.height > 0
+        else {
+            return nil
         }
+        return image
+    }
+
+    private func clipboardImageURL(filename: String) -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            return nil
+        }
+        let url = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 }

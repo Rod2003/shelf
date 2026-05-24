@@ -31,14 +31,22 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
 
     public var visibleShelfCount: Int { controllers.count }
 
-    public func openShelf(_ shelfID: ShelfGroupID, contentView: NSView, baseOrigin: CGPoint) {
+    public func openShelf(
+        _ shelfID: ShelfGroupID,
+        contentView: NSView,
+        baseOrigin: CGPoint
+    ) {
         if let existing = controllers[shelfID] {
             existing.show()
             log.debug("Re-showed existing panel id=\(shelfID.rawValue.uuidString, privacy: .public)")
             return
         }
         let cascade = computeCascadeOrigin(baseOrigin: baseOrigin, existingCount: controllers.count)
-        let controller = ShelfWindowController(shelfID: shelfID, contentView: contentView, atOrigin: cascade)
+        let controller = ShelfWindowController(
+            shelfID: shelfID,
+            contentView: contentView,
+            atOrigin: cascade
+        )
         controller.delegate = self
         controllers[shelfID] = controller
         controller.show()
