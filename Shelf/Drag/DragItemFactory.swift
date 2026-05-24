@@ -4,9 +4,13 @@ import OSLog
 import ShelfCore
 import UniformTypeIdentifiers
 
-@MainActor
+private enum ShelfDragLog {
+    static let appBundleIdentifier = "dev.rod.shelf"
+    static let logger = Logger(subsystem: appBundleIdentifier, category: "drag")
+}
+
 public enum DragItemFactory {
-    private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
+    private static let log = ShelfDragLog.logger
 
     private static let maxDisplayNameLength: Int = 80
     public static let acceptedPasteboardTypes: [NSPasteboard.PasteboardType] = [
@@ -124,9 +128,8 @@ public enum DragItemFactory {
     }
 }
 
-@MainActor
 enum DropItemBuilder {
-    private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
+    private static let log = ShelfDragLog.logger
     private static let maxDisplayNameLength: Int = 80
 
     static func makeFileBookmarkItem(from url: URL) -> ShelfItem? {

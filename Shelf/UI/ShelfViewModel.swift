@@ -24,9 +24,6 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var drawerActiveSelectionID: ItemID?
     @Published public var isDropTargeted: Bool
 
-    /// Animates the panel between collapsed and expanded sizes. Invoked by
-    /// `setExpanded` to sequence the window resize and the SwiftUI content
-    /// animation so they don't fight each other. Wired in by AppCoordinator.
     public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
     public init(shelf: ShelfGroup) {

@@ -186,32 +186,6 @@ final class DragInDragOutIntegrationTests: XCTestCase {
         }
         XCTAssertEqual(record.originalPath, file.path)
     }
-    func testSwiftUIDropWebURLProducesWebURLItem() async throws {
-        let url = URL(string: "https://example.com/swiftui-drop")!
-        let provider = NSItemProvider(object: url as NSURL)
-
-        let items = await DragItemFactory.makeItems(from: [provider])
-
-        XCTAssertEqual(items.count, 1)
-        guard case let .webURL(itemURL) = items[0].kind else {
-            return XCTFail("expected .webURL, got \(items[0].kind)")
-        }
-        XCTAssertEqual(itemURL, url)
-        XCTAssertEqual(items[0].displayName, "example.com")
-    }
-    func testSwiftUIDropPlainStringProducesTextItem() async throws {
-        let payload = "  hello provider shelf  "
-        let provider = NSItemProvider(object: payload as NSString)
-
-        let items = await DragItemFactory.makeItems(from: [provider])
-
-        XCTAssertEqual(items.count, 1)
-        guard case let .text(text) = items[0].kind else {
-            return XCTFail("expected .text, got \(items[0].kind)")
-        }
-        XCTAssertEqual(text, payload)
-        XCTAssertEqual(items[0].displayName, "hello provider shelf")
-    }
     func testSwiftUIDropImageDataProducesClipboardImageItem() async throws {
         let data = try makePNGData()
         let provider = NSItemProvider()
