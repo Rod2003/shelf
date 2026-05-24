@@ -331,7 +331,7 @@ private struct StackCardsView: View {
                     offset: layer.offset
                 )
             }
-            ForEach(Array(items.dropFirst(3)), id: \.id) { item in
+            ForEach(Array(items.dropFirst(3)), id: \.id) { _ in
                 Color.clear
                     .frame(width: Self.glassCardSize.width, height: Self.glassCardSize.height)
             }
