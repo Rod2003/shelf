@@ -8,15 +8,7 @@ public final class DragInView: NSView {
 
     public var onDrop: (([ShelfItem]) -> Void)?
 
-    public static let acceptedTypes: [NSPasteboard.PasteboardType] = [
-        .fileURL,
-        .URL,
-        .png,
-        .tiff,
-        .fileContents,
-        NSPasteboard.PasteboardType("public.image"),
-        .string
-    ]
+    public static let acceptedTypes: [NSPasteboard.PasteboardType] = DragItemFactory.acceptedPasteboardTypes
 
     private var isHighlighted = false {
         didSet {
@@ -29,7 +21,7 @@ public final class DragInView: NSView {
 
     private static let borderInset: CGFloat = 0
     private static let borderLineWidth: CGFloat = 4
-    private static let borderCornerRadius: CGFloat = 22
+    private static let borderCornerRadius: CGFloat = 26
     private static let highlightFadeDuration: CFTimeInterval = 0.2
 
     public override init(frame frameRect: NSRect) {
@@ -45,6 +37,10 @@ public final class DragInView: NSView {
     }
 
     public override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard sender.draggingDestinationWindow === window else {
+            isHighlighted = false
+            return []
+        }
         guard hasAcceptableContent(in: sender.draggingPasteboard) else {
             log.debug("draggingEntered: no acceptable content; rejecting")
             return []
@@ -53,16 +49,28 @@ public final class DragInView: NSView {
         return .copy
     }
 
+    public override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard sender.draggingDestinationWindow === window else {
+            isHighlighted = false
+            return []
+        }
+        return hasAcceptableContent(in: sender.draggingPasteboard) ? .copy : []
+    }
+
     public override func draggingExited(_ sender: NSDraggingInfo?) {
         isHighlighted = false
     }
 
     public override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        hasAcceptableContent(in: sender.draggingPasteboard)
+        sender.draggingDestinationWindow === window
+            && hasAcceptableContent(in: sender.draggingPasteboard)
     }
 
     public override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         defer { isHighlighted = false }
+        guard sender.draggingDestinationWindow === window else {
+            return false
+        }
         let items = DragItemFactory.makeItems(from: sender.draggingPasteboard)
         guard !items.isEmpty else {
             log.warning("performDragOperation: pasteboard advertised acceptable types but no items extracted")

@@ -5,7 +5,7 @@ import ShelfCore
 
 @MainActor
 public final class AppCoordinator {
-    private static let expandedPanelSize = CGSize(width: 280, height: 360)
+    private static let expandedPanelSize = CGSize(width: 280, height: 280)
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
 
     private let defaultsBackend: DefaultsBackend
@@ -129,6 +129,9 @@ public final class AppCoordinator {
             onDeleteItems: { [weak self] itemIDs in
                 self?.removeItems(itemIDs, from: shelfID)
             },
+            onDropItems: { [weak self] items in
+                self?.appendItems(items, to: shelfID)
+            },
             onCollapseRequested: { [weak viewModel] in
                 viewModel?.setExpanded(false)
             },
@@ -136,12 +139,15 @@ public final class AppCoordinator {
                 self?.windowManager.closeShelf(shelfID)
             }
         )
-        wireDragIn(on: contentView, for: shelf.id)
         let base = PanelPositioner.computeOrigin(
             forCursor: PanelPositioner.liveCursor(),
             screens: PanelPositioner.liveScreens()
         )
-        windowManager.openShelf(shelf.id, contentView: contentView, baseOrigin: base)
+        windowManager.openShelf(
+            shelf.id,
+            contentView: contentView,
+            baseOrigin: base
+        )
         wireWindowAnimation(viewModel, shelfID: shelf.id)
         publishActiveShelvesToMenu()
         log.info("Created new shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
@@ -151,20 +157,6 @@ public final class AppCoordinator {
         let openIDs = Set(windowManager.openShelfIDs())
         let openShelves = shelfStore.all().filter { openIDs.contains($0.id) }
         menuBar.activeShelves = openShelves.sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private func wireDragIn(on contentView: NSView, for shelfID: ShelfGroupID) {
-        let dragIn = DragInView(frame: contentView.bounds)
-        dragIn.autoresizingMask = [.width, .height]
-        dragIn.onDrop = { [weak self] items in
-            self?.appendItems(items, to: shelfID)
-        }
-        // Keep drag receiving below SwiftUI so taps still land on the hosting view.
-        contentView.addSubview(
-            dragIn,
-            positioned: .below,
-            relativeTo: contentView.subviews.first
-        )
     }
 
     private func appendItems(_ items: [ShelfItem], to shelfID: ShelfGroupID) {
@@ -196,7 +188,7 @@ public final class AppCoordinator {
     }
 
     private func wireWindowAnimation(_ viewModel: ShelfViewModel, shelfID: ShelfGroupID) {
-        viewModel.animateWindow = { [weak self] expanded, completion in
+        viewModel.animateWindow = { [weak self] expanded, duration, completion in
             guard
                 let self,
                 let controller = self.windowManager.controller(for: shelfID)
@@ -212,7 +204,12 @@ public final class AppCoordinator {
                 targetSize = self.collapsedSizesByShelf.removeValue(forKey: shelfID)
                     ?? ShelfWindowController.defaultPanelSize
             }
-            controller.setFrameSize(targetSize, animated: true, completion: completion)
+            controller.setFrameSize(
+                targetSize,
+                animated: true,
+                duration: duration,
+                completion: completion
+            )
         }
     }
 

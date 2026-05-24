@@ -31,7 +31,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         let frame = NSRect(origin: atOrigin, size: panelSize)
         let panel = NSPanel(
             contentRect: frame,
-            styleMask: [.nonactivatingPanel],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -42,15 +42,17 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.isFloatingPanel = true
         panel.titlebarAppearsTransparent = true
         panel.titleVisibility = .hidden
+        panel.isMovable = true
         panel.isMovableByWindowBackground = true
 
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.animationBehavior = .none
         contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = contentView
 
         self.panel = panel
@@ -77,6 +79,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public func setFrameSize(
         _ targetSize: CGSize,
         animated: Bool,
+        duration: TimeInterval = 0.32,
         completion: (() -> Void)? = nil
     ) {
         guard targetSize.width > 0, targetSize.height > 0 else {
@@ -90,7 +93,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
             return
         }
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = Self.expansionDuration
+            context.duration = duration
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.32, 0.94, 0.36, 1.0)
             context.allowsImplicitAnimation = true
             panel.animator().setFrame(targetFrame, display: true)
