@@ -6,7 +6,7 @@ import OSLog
 @MainActor
 public final class HotkeyManager {
     public enum HotkeyKind: UInt32, CaseIterable {
-        case newShelf = 1
+        case showShelf = 1
         case closeFrontmost = 2
         case quickLook = 3
     }
@@ -19,13 +19,13 @@ public final class HotkeyManager {
 
     private var eventHandlerRef: EventHandlerRef?
 
-    public var onNewShelf: (() -> Void)?
+    public var onShowShelf: (() -> Void)?
     public var onCloseFrontmost: (() -> Void)?
     public var onQuickLook: (() -> Void)?
 
     public init() {
         installCarbonEventHandler()
-        register(.newShelf)
+        register(.showShelf)
     }
 
     deinit {
@@ -106,7 +106,7 @@ public final class HotkeyManager {
         }
         let (keyCode, modifiers): (UInt32, UInt32) = {
             switch kind {
-            case .newShelf:        return (UInt32(kVK_Space),  UInt32(cmdKey | shiftKey))
+            case .showShelf:       return (UInt32(kVK_Space),  UInt32(cmdKey | shiftKey))
             case .closeFrontmost:  return (UInt32(kVK_Escape), 0)
             case .quickLook:       return (UInt32(kVK_Space),  0)
             }
@@ -149,9 +149,9 @@ public final class HotkeyManager {
             return
         }
         switch kind {
-        case .newShelf:
-            log.info("newShelf hotkey fired")
-            onNewShelf?()
+        case .showShelf:
+            log.info("showShelf hotkey fired")
+            onShowShelf?()
         case .closeFrontmost:
             log.info("closeFrontmost hotkey fired")
             onCloseFrontmost?()

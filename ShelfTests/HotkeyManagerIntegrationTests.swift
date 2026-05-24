@@ -47,31 +47,31 @@ final class HotkeyManagerIntegrationTests: XCTestCase {
     }
     func testCallbacksAreSettableAndInvokable() {
         let manager = HotkeyManager()
-        var newShelfFired = 0
+        var showShelfFired = 0
         var closeFired = 0
         var quickLookFired = 0
-        manager.onNewShelf = { newShelfFired += 1 }
+        manager.onShowShelf = { showShelfFired += 1 }
         manager.onCloseFrontmost = { closeFired += 1 }
         manager.onQuickLook = { quickLookFired += 1 }
-        manager.onNewShelf?()
+        manager.onShowShelf?()
         manager.onCloseFrontmost?()
         manager.onQuickLook?()
 
-        XCTAssertEqual(newShelfFired, 1)
+        XCTAssertEqual(showShelfFired, 1)
         XCTAssertEqual(closeFired, 1)
         XCTAssertEqual(quickLookFired, 1)
     }
     func testCallbacksDefaultToNilAndOptionalCallIsSafe() {
         let manager = HotkeyManager()
-        XCTAssertNil(manager.onNewShelf)
+        XCTAssertNil(manager.onShowShelf)
         XCTAssertNil(manager.onCloseFrontmost)
         XCTAssertNil(manager.onQuickLook)
-        manager.onNewShelf?()
+        manager.onShowShelf?()
         manager.onCloseFrontmost?()
         manager.onQuickLook?()
     }
     func testHotkeyKindRawValuesArePinned() {
-        XCTAssertEqual(HotkeyManager.HotkeyKind.newShelf.rawValue, 1)
+        XCTAssertEqual(HotkeyManager.HotkeyKind.showShelf.rawValue, 1)
         XCTAssertEqual(HotkeyManager.HotkeyKind.closeFrontmost.rawValue, 2)
         XCTAssertEqual(HotkeyManager.HotkeyKind.quickLook.rawValue, 3)
         XCTAssertEqual(HotkeyManager.HotkeyKind.allCases.count, 3)
