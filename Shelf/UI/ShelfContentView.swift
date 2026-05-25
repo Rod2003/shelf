@@ -259,7 +259,7 @@ private struct StackedShelfView: View {
 
     var body: some View {
         ShelfGlassContainer(spacing: 40) {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 if let top = viewModel.items.first {
                     DragOutCellWrapper(
                         item: top,
@@ -282,19 +282,24 @@ private struct StackedShelfView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
-                if viewModel.showsCollapsedPill {
-                    ShelfPill(
-                        label: pillLabel,
-                        fitsToContent: viewModel.items.count > 1,
-                        glassNamespace: glassNamespace,
-                        onToggle: {
-                            viewModel.setExpanded(true)
-                        }
-                    )
-                    .padding(.horizontal, Self.pillHorizontalPadding)
-                    .padding(.bottom, Self.pillBottomPadding)
-                    .transition(.opacity)
+
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    if viewModel.showsCollapsedPill {
+                        ShelfPill(
+                            label: pillLabel,
+                            fitsToContent: viewModel.items.count > 1,
+                            glassNamespace: glassNamespace,
+                            onToggle: {
+                                viewModel.setExpanded(true)
+                            }
+                        )
+                        .padding(.horizontal, Self.pillHorizontalPadding)
+                        .padding(.bottom, Self.pillBottomPadding)
+                        .transition(.opacity)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
