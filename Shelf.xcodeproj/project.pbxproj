@@ -24,7 +24,6 @@
 		6093F6DBFC90938CC41C91B1 /* ShelfApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */; };
 		699A66100E294AC382A31397 /* NoWindowDragOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A45426C0FA45A365BEDD0D1 /* NoWindowDragOverlay.swift */; };
 		6DB3EFDE157406CD9DE407BC /* PanelPositioner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5804D49D01AAADB58714ED8 /* PanelPositioner.swift */; };
-		7086889CF5051BE6EB9222B3 /* ContentViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */; };
 		730CFB1D2ABC2638E99D0144 /* ShelfCore in Frameworks */ = {isa = PBXBuildFile; productRef = D3B3D7FE690B7CCB4CC75D90 /* ShelfCore */; };
 		8BB39BB6967C4533412FDB10 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */; };
 		8F6D6B537157D62A0904EF60 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52830C11D37CBBA9C1A8847E /* main.swift */; };
@@ -66,7 +65,6 @@
 		39E1FF9FBB78510063F526A6 /* DragItemFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragItemFactory.swift; sourceTree = "<group>"; };
 		4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPositionerTests.swift; sourceTree = "<group>"; };
 		52830C11D37CBBA9C1A8847E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewFactory.swift; sourceTree = "<group>"; };
 		774F726E1E1B25D732E2C7FD /* Shelf.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shelf.entitlements; sourceTree = "<group>"; };
 		77B5B8D12EBC926332892831 /* DragOutCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOutCell.swift; sourceTree = "<group>"; };
 		83B1CFC6CC772B8F8500F142 /* ThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailService.swift; sourceTree = "<group>"; };
@@ -130,7 +128,6 @@
 		2FEF38D365FAA7AFA1782EC2 /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */,
 				A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */,
 				2A45426C0FA45A365BEDD0D1 /* NoWindowDragOverlay.swift */,
 				EC36DCF7107668303D2218A4 /* ShelfContentView.swift */,
@@ -351,7 +348,6 @@
 				0DDADE154054E088C9E1820B /* AppCoordinator.swift in Sources */,
 				8BB39BB6967C4533412FDB10 /* AppDelegate.swift in Sources */,
 				BDB1864E8999279C691F5EBD /* BookmarkResolver.swift in Sources */,
-				7086889CF5051BE6EB9222B3 /* ContentViewFactory.swift in Sources */,
 				58941865293EABA9E328B014 /* DefaultsBackend.swift in Sources */,
 				19FE6C01B7BBE287C72E4B0B /* DragInView.swift in Sources */,
 				C242A3805A9E987DF05B9BDA /* DragItemFactory.swift in Sources */,

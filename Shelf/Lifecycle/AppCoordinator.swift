@@ -3,6 +3,7 @@ import Combine
 import CryptoKit
 import OSLog
 import ShelfCore
+import SwiftUI
 
 @MainActor
 public final class AppCoordinator {
@@ -137,36 +138,41 @@ public final class AppCoordinator {
         }
         let viewModel = ShelfViewModel(shelf: shelf)
         self.viewModel = viewModel
-        let contentView = ContentViewFactory.makeContentView(
-            viewModel: viewModel,
-            resolver: bookmarkResolver,
-            thumbnailService: thumbnailService,
-            onSingleDragEnded: { [weak self] result in
-                self?.handleDragOutEnded(result)
-            },
-            onMultiDragEnded: { [weak self] result in
-                self?.handleMultiDragOutEnded(result)
-            },
-            onDeleteItems: { [weak self] itemIDs in
-                self?.removeItems(itemIDs)
-            },
-            onDropItems: { [weak self] items in
-                self?.appendItems(items)
-            },
-            onCollapseRequested: { [weak viewModel] in
-                viewModel?.setExpanded(false)
-            },
-            onClose: { [weak self] in
-                self?.clearAndCloseShelf()
-            }
+        let hosting = NSHostingView(
+            rootView: ShelfContentView(
+                viewModel: viewModel,
+                resolver: bookmarkResolver,
+                thumbnailService: thumbnailService,
+                onSingleDragEnded: { [weak self] result in
+                    self?.handleDragOutEnded(result)
+                },
+                onMultiDragEnded: { [weak self] result in
+                    self?.handleMultiDragOutEnded(result)
+                },
+                onDeleteItems: { [weak self] itemIDs in
+                    self?.removeItems(itemIDs)
+                },
+                onDropItems: { [weak self] items in
+                    self?.appendItems(items)
+                },
+                onCollapseRequested: { [weak viewModel] in
+                    viewModel?.setExpanded(false)
+                },
+                onClose: { [weak self] in
+                    self?.clearAndCloseShelf()
+                }
+            )
         )
+        hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
         let base = PanelPositioner.computeOrigin(
             forCursor: PanelPositioner.liveCursor(),
             screens: PanelPositioner.liveScreens()
         )
         windowManager.openShelf(
             shelf.id,
-            contentView: contentView,
+            contentView: hosting,
             baseOrigin: base,
             wantsKey: wantsKey
         )
