@@ -24,8 +24,6 @@ public final class QuickLookCoordinator: NSObject {
         }
     }
 
-    /// Shows bookmark-backed resolutions and plain file URLs in one Quick Look panel.
-    /// Resolutions stay security-scoped until replaced or the panel closes.
     public func show(
         bookmarkResolutions: [BookmarkResolver.Resolution],
         unscopedURLs: [URL]
