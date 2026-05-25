@@ -10,6 +10,8 @@ public final class QuickLookCoordinator: NSObject {
     private var heldResolutions: [BookmarkResolver.Resolution] = []
     private var observer: NSObjectProtocol?
 
+    public var onDidClose: (() -> Void)?
+
     public init(resolver: BookmarkResolver) {
         self.resolver = resolver
         super.init()
@@ -70,10 +72,15 @@ public final class QuickLookCoordinator: NSObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.releaseHeldResolutions()
-                self?.currentURLs = []
+                self?.handlePanelDidClose()
             }
         }
+    }
+
+    private func handlePanelDidClose() {
+        releaseHeldResolutions()
+        currentURLs = []
+        onDidClose?()
     }
 
     private func releaseHeldResolutions() {
@@ -94,4 +101,13 @@ extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDataSource {
     }
 }
 
-extension QuickLookCoordinator: QLPreviewPanelDelegate {}
+extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDelegate {
+    public func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+        guard event.type == .keyDown,
+              event.charactersIgnoringModifiers == " " else {
+            return false
+        }
+        closeIfVisible()
+        return true
+    }
+}

@@ -66,6 +66,9 @@ public final class AppCoordinator {
         hotkeyManager.onQuickLook = { [weak self] in
             self?.invokeQuickLookForKeyShelf()
         }
+        quickLook.onDidClose = { [weak self] in
+            self?.windowManager.focusShelf(wantsKey: true)
+        }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
             self?.showShelfAtCursor(wantsKey: false)

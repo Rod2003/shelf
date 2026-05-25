@@ -72,8 +72,9 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.hidesOnDeactivate = false
         panel.animationBehavior = .none
         contentView.wantsLayer = true
-        contentView.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = contentView
+        Self.applyRoundedClearMask(to: contentView.layer)
+        Self.applyRoundedClearMask(to: contentView.superview?.layer)
 
         self.panel = panel
         super.init()
@@ -95,6 +96,14 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     }
 
     public static let expansionDuration: TimeInterval = 0.32
+
+    private static func applyRoundedClearMask(to layer: CALayer?) {
+        guard let layer else { return }
+        layer.backgroundColor = NSColor.clear.cgColor
+        layer.cornerRadius = ShelfGlass.panelCornerRadius
+        layer.cornerCurve = .continuous
+        layer.masksToBounds = true
+    }
 
     public func setFrameWidth(_ targetWidth: CGFloat, animated: Bool) {
         setFrameSize(CGSize(width: targetWidth, height: panel.frame.height), animated: animated)
