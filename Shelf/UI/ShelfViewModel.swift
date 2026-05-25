@@ -126,6 +126,10 @@ public final class ShelfViewModel: ObservableObject {
         selectedItemID = itemID
     }
 
+    public func selectCollapsedStack() {
+        selectedItemID = items.first?.id
+    }
+
     public func toggle(_ itemID: ItemID) {
         if drawerSelection.contains(itemID) {
             drawerSelection.remove(itemID)
@@ -161,7 +165,7 @@ public final class ShelfViewModel: ObservableObject {
         if isExpanded {
             return items.filter { drawerSelection.contains($0.id) }
         }
-        return items
+        return selectedItemID == nil ? [] : items
     }
 
     public func reorder(from source: Int, to destination: Int) {

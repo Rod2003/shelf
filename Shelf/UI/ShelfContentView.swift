@@ -257,13 +257,19 @@ private struct StackedShelfView: View {
         return "\(viewModel.items.count) attachments"
     }
 
+    private var isStackSelected: Bool {
+        viewModel.selectedItemID != nil
+    }
+
     var body: some View {
         ShelfGlassContainer(spacing: 40) {
             ZStack {
                 if let top = viewModel.items.first {
                     DragOutCellWrapper(
                         item: top,
-                        onTapWithModifiers: { _ in },
+                        onTapWithModifiers: { _ in
+                            viewModel.selectCollapsedStack()
+                        },
                         onDragEnded: { onSingleDragEnded?($0) },
                         multiItemsProvider: { viewModel.items },
                         onMultiDragEnded: { onMultiDragEnded?($0) }
@@ -279,6 +285,14 @@ private struct StackedShelfView: View {
                         width: Self.stackDragOutSize.width,
                         height: Self.stackDragOutSize.height,
                         alignment: .center
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                Color.accentColor,
+                                lineWidth: isStackSelected ? 2 : 0
+                            )
+                            .allowsHitTesting(false)
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }

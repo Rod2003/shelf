@@ -16,10 +16,18 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         return ShelfGroup(name: "test", items: items)
     }
 
-    func testCollapsedReturnsAllItems() {
+    func testCollapsedWithoutStackSelectionReturnsEmpty() {
         let shelf = makeShelf(itemCount: 3)
         let vm = ShelfViewModel(shelf: shelf)
         XCTAssertFalse(vm.isExpanded)
+
+        XCTAssertTrue(vm.quickLookTargetItems.isEmpty)
+    }
+
+    func testCollapsedSelectedStackReturnsAllItems() {
+        let shelf = makeShelf(itemCount: 3)
+        let vm = ShelfViewModel(shelf: shelf)
+        vm.selectCollapsedStack()
 
         let targets = vm.quickLookTargetItems
         XCTAssertEqual(targets.map(\.id), shelf.items.map(\.id))
