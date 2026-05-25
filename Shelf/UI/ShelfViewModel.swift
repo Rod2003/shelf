@@ -130,6 +130,11 @@ public final class ShelfViewModel: ObservableObject {
         selectedItemID = items.first?.id
     }
 
+    public func clearCollapsedStackSelection() {
+        guard !isExpanded else { return }
+        selectedItemID = nil
+    }
+
     public func toggle(_ itemID: ItemID) {
         if drawerSelection.contains(itemID) {
             drawerSelection.remove(itemID)

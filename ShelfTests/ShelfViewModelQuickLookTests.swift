@@ -33,6 +33,17 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         XCTAssertEqual(targets.map(\.id), shelf.items.map(\.id))
     }
 
+    func testClearingCollapsedStackSelectionDisablesQuickLook() {
+        let shelf = makeShelf(itemCount: 3)
+        let vm = ShelfViewModel(shelf: shelf)
+        vm.selectCollapsedStack()
+
+        vm.clearCollapsedStackSelection()
+
+        XCTAssertNil(vm.selectedItemID)
+        XCTAssertTrue(vm.quickLookTargetItems.isEmpty)
+    }
+
     func testCollapsedEmptyShelfReturnsEmpty() {
         let vm = ShelfViewModel(shelf: makeShelf(itemCount: 0))
         XCTAssertTrue(vm.quickLookTargetItems.isEmpty)
