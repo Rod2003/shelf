@@ -67,6 +67,7 @@ public final class AppCoordinator {
             self?.invokeQuickLookForKeyShelf()
         }
         quickLook.onDidClose = { [weak self] in
+            self?.log.info("Quick Look did close; restoring shelf focus")
             self?.windowManager.focusShelf(wantsKey: true)
         }
 
@@ -90,11 +91,18 @@ public final class AppCoordinator {
         // Gate bare Space or it steals Space from every app.
         windowManager.onShelfBecameKey = { [weak self] in
             guard let self else { return }
+            self.log.debug("Shelf became key; enabling Esc/Space hotkeys")
             self.hotkeyManager.setEscEnabled(true)
             self.hotkeyManager.setSpaceEnabled(true)
         }
         windowManager.onShelfResignedKey = { [weak self] in
             guard let self else { return }
+            self.log.debug("Shelf resigned key quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
+            guard !self.quickLook.isVisible else {
+                self.hotkeyManager.setSpaceEnabled(true)
+                self.hotkeyManager.setEscEnabled(true)
+                return
+            }
             if !self.windowManager.isShelfKey() {
                 self.hotkeyManager.setEscEnabled(false)
                 self.hotkeyManager.setSpaceEnabled(false)
@@ -246,6 +254,7 @@ public final class AppCoordinator {
     }
 
     private func invokeQuickLookForKeyShelf() {
+        log.debug("Quick Look hotkey received shelfKey=\(self.windowManager.isShelfKey(), privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
         if quickLook.closeIfVisible() {
             return
         }
