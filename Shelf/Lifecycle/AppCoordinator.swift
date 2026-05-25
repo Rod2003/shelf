@@ -56,7 +56,7 @@ public final class AppCoordinator {
 
     private func wireCallbacks() {
         hotkeyManager.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: true)
         }
         hotkeyManager.onCloseFrontmost = { [weak self] in
             guard let self else { return }
@@ -68,14 +68,14 @@ public final class AppCoordinator {
         }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: false)
         }
 
         menuBar.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: true)
         }
         menuBar.onFocusShelf = { [weak self] in
-            self?.windowManager.focusShelf()
+            self?.windowManager.focusShelf(wantsKey: true)
         }
         menuBar.onAbout = {
             NSApp.orderFrontStandardAboutPanel(nil)
@@ -110,10 +110,10 @@ public final class AppCoordinator {
         }
     }
 
-    private func showShelfAtCursor() {
+    private func showShelfAtCursor(wantsKey: Bool) {
         if windowManager.visibleShelfCount > 0 {
-            windowManager.focusShelf()
-            log.debug("Focused existing shelf")
+            windowManager.focusShelf(wantsKey: wantsKey)
+            log.debug("Focused existing shelf wantsKey=\(wantsKey, privacy: .public)")
             return
         }
 
@@ -154,7 +154,8 @@ public final class AppCoordinator {
         windowManager.openShelf(
             shelf.id,
             contentView: contentView,
-            baseOrigin: base
+            baseOrigin: base,
+            wantsKey: wantsKey
         )
         wireWindowAnimation(viewModel)
         wireKeyHandling(viewModel)

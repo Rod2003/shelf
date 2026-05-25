@@ -80,9 +80,13 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
     }
 
-    public func show() {
-        panel.orderFrontRegardless()
-        log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
+    public func show(wantsKey: Bool = false) {
+        if wantsKey {
+            panel.makeKeyAndOrderFront(nil)
+        } else {
+            panel.orderFrontRegardless()
+        }
+        log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public) wantsKey=\(wantsKey, privacy: .public)")
     }
 
     public func close() {
