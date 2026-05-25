@@ -241,9 +241,9 @@ public struct ShelfContentView: View {
 }
 
 private struct StackedShelfView: View {
-    private static let pillBottomPadding: CGFloat = 12
+    private static let pillBottomPadding: CGFloat = 6
     private static let pillHorizontalPadding: CGFloat = 14
-    private static let stackDragOutSize = CGSize(width: 116, height: 116)
+    private static let stackDragOutSize = CGSize(width: 104, height: 104)
 
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
@@ -257,13 +257,25 @@ private struct StackedShelfView: View {
         return "\(viewModel.items.count) attachments"
     }
 
+    private var isStackSelected: Bool {
+        viewModel.selectedItemID != nil
+    }
+
     var body: some View {
         ShelfGlassContainer(spacing: 40) {
-            ZStack(alignment: .bottom) {
+            ZStack {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.clearCollapsedStackSelection()
+                    }
+
                 if let top = viewModel.items.first {
                     DragOutCellWrapper(
                         item: top,
-                        onTapWithModifiers: { _ in },
+                        onTapWithModifiers: { _ in
+                            viewModel.selectCollapsedStack()
+                        },
                         onDragEnded: { onSingleDragEnded?($0) },
                         multiItemsProvider: { viewModel.items },
                         onMultiDragEnded: { onMultiDragEnded?($0) }
@@ -280,21 +292,34 @@ private struct StackedShelfView: View {
                         height: Self.stackDragOutSize.height,
                         alignment: .center
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                Color.accentColor,
+                                lineWidth: isStackSelected ? 2 : 0
+                            )
+                            .allowsHitTesting(false)
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
-                if viewModel.showsCollapsedPill {
-                    ShelfPill(
-                        label: pillLabel,
-                        fitsToContent: viewModel.items.count > 1,
-                        glassNamespace: glassNamespace,
-                        onToggle: {
-                            viewModel.setExpanded(true)
-                        }
-                    )
-                    .padding(.horizontal, Self.pillHorizontalPadding)
-                    .padding(.bottom, Self.pillBottomPadding)
-                    .transition(.opacity)
+
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    if viewModel.showsCollapsedPill {
+                        ShelfPill(
+                            label: pillLabel,
+                            fitsToContent: viewModel.items.count > 1,
+                            glassNamespace: glassNamespace,
+                            onToggle: {
+                                viewModel.setExpanded(true)
+                            }
+                        )
+                        .padding(.horizontal, Self.pillHorizontalPadding)
+                        .padding(.bottom, Self.pillBottomPadding)
+                        .transition(.opacity)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -302,11 +327,11 @@ private struct StackedShelfView: View {
 }
 
 private struct StackCardsView: View {
-    private static let glassCardSize = CGSize(width: 94, height: 94)
+    private static let glassCardSize = CGSize(width: 84, height: 84)
     private static let layerStyles: [(rotation: Double, offset: CGSize)] = [
         (0, .zero),
         (-5, CGSize(width: -2, height: 2)),
-        (5, CGSize(width: 4, height: 4)),
+        (5, CGSize(width: 3, height: 3)),
     ]
 
     let items: [ShelfItem]
@@ -336,7 +361,7 @@ private struct StackCardsView: View {
                     .frame(width: Self.glassCardSize.width, height: Self.glassCardSize.height)
             }
         }
-        .frame(width: 96, height: 96)
+        .frame(width: 86, height: 86)
     }
 }
 
@@ -354,7 +379,7 @@ private struct StackThumbnailCard: View {
     let rotation: Double
     let offset: CGSize
     @State private var thumbnail: NSImage?
-    private let maxImageSize = CGSize(width: 84, height: 84)
+    private let maxImageSize = CGSize(width: 74, height: 74)
 
     var body: some View {
         ZStack {

@@ -34,10 +34,11 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
     public func openShelf(
         _ shelfID: ShelfGroupID,
         contentView: NSView,
-        baseOrigin: CGPoint
+        baseOrigin: CGPoint,
+        wantsKey: Bool
     ) {
         if let existing = controller {
-            existing.show()
+            existing.show(wantsKey: wantsKey)
             log.debug("Re-showed existing panel id=\(existing.shelfID.rawValue.uuidString, privacy: .public)")
             return
         }
@@ -48,7 +49,7 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
         )
         controller.delegate = self
         self.controller = controller
-        controller.show()
+        controller.show(wantsKey: wantsKey)
         log.info("Opened shelf panel id=\(shelfID.rawValue.uuidString, privacy: .public)")
     }
 
@@ -64,8 +65,8 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
         controller?.panel.isKeyWindow == true
     }
 
-    public func focusShelf() {
-        controller?.show()
+    public func focusShelf(wantsKey: Bool = true) {
+        controller?.show(wantsKey: wantsKey)
     }
 
     public func shelfController() -> ShelfWindowController? {

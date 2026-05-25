@@ -126,6 +126,15 @@ public final class ShelfViewModel: ObservableObject {
         selectedItemID = itemID
     }
 
+    public func selectCollapsedStack() {
+        selectedItemID = items.first?.id
+    }
+
+    public func clearCollapsedStackSelection() {
+        guard !isExpanded else { return }
+        selectedItemID = nil
+    }
+
     public func toggle(_ itemID: ItemID) {
         if drawerSelection.contains(itemID) {
             drawerSelection.remove(itemID)
@@ -157,14 +166,11 @@ public final class ShelfViewModel: ObservableObject {
         selectedItemID = itemID
     }
 
-    public var quickLookTargetItem: ShelfItem? {
-        let targetID: ItemID?
+    public var quickLookTargetItems: [ShelfItem] {
         if isExpanded {
-            targetID = drawerActiveSelectionID ?? drawerSelection.first
-        } else {
-            targetID = selectedItemID
+            return items.filter { drawerSelection.contains($0.id) }
         }
-        return targetID.flatMap { id in items.first(where: { $0.id == id }) } ?? items.first
+        return selectedItemID == nil ? [] : items
     }
 
     public func reorder(from source: Int, to destination: Int) {

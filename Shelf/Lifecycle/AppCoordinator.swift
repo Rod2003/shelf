@@ -37,7 +37,7 @@ public final class AppCoordinator {
         self.shakeDetector = ShakeDetector(config: .defaultMedium)
         self.menuBar = MenuBarController()
         self.windowManager = ShelfWindowManager()
-        self.quickLook = QuickLookCoordinator()
+        self.quickLook = QuickLookCoordinator(resolver: bookmarkResolver)
     }
 
     public func bootstrap() {
@@ -56,7 +56,7 @@ public final class AppCoordinator {
 
     private func wireCallbacks() {
         hotkeyManager.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: true)
         }
         hotkeyManager.onCloseFrontmost = { [weak self] in
             guard let self else { return }
@@ -66,16 +66,20 @@ public final class AppCoordinator {
         hotkeyManager.onQuickLook = { [weak self] in
             self?.invokeQuickLookForKeyShelf()
         }
+        quickLook.onDidClose = { [weak self] in
+            self?.log.info("Quick Look did close; restoring shelf focus")
+            self?.windowManager.focusShelf(wantsKey: true)
+        }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: false)
         }
 
         menuBar.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor()
+            self?.showShelfAtCursor(wantsKey: true)
         }
         menuBar.onFocusShelf = { [weak self] in
-            self?.windowManager.focusShelf()
+            self?.windowManager.focusShelf(wantsKey: true)
         }
         menuBar.onAbout = {
             NSApp.orderFrontStandardAboutPanel(nil)
@@ -87,11 +91,18 @@ public final class AppCoordinator {
         // Gate bare Space or it steals Space from every app.
         windowManager.onShelfBecameKey = { [weak self] in
             guard let self else { return }
+            self.log.debug("Shelf became key; enabling Esc/Space hotkeys")
             self.hotkeyManager.setEscEnabled(true)
             self.hotkeyManager.setSpaceEnabled(true)
         }
         windowManager.onShelfResignedKey = { [weak self] in
             guard let self else { return }
+            self.log.debug("Shelf resigned key quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
+            guard !self.quickLook.isVisible else {
+                self.hotkeyManager.setSpaceEnabled(true)
+                self.hotkeyManager.setEscEnabled(true)
+                return
+            }
             if !self.windowManager.isShelfKey() {
                 self.hotkeyManager.setEscEnabled(false)
                 self.hotkeyManager.setSpaceEnabled(false)
@@ -110,10 +121,10 @@ public final class AppCoordinator {
         }
     }
 
-    private func showShelfAtCursor() {
+    private func showShelfAtCursor(wantsKey: Bool) {
         if windowManager.visibleShelfCount > 0 {
-            windowManager.focusShelf()
-            log.debug("Focused existing shelf")
+            windowManager.focusShelf(wantsKey: wantsKey)
+            log.debug("Focused existing shelf wantsKey=\(wantsKey, privacy: .public)")
             return
         }
 
@@ -154,7 +165,8 @@ public final class AppCoordinator {
         windowManager.openShelf(
             shelf.id,
             contentView: contentView,
-            baseOrigin: base
+            baseOrigin: base,
+            wantsKey: wantsKey
         )
         wireWindowAnimation(viewModel)
         wireKeyHandling(viewModel)
@@ -242,6 +254,11 @@ public final class AppCoordinator {
     }
 
     private func invokeQuickLookForKeyShelf() {
+        log.debug("Quick Look hotkey received shelfKey=\(self.windowManager.isShelfKey(), privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
+        if quickLook.closeIfVisible() {
+            return
+        }
+
         guard windowManager.isShelfKey() else {
             log.debug("Quick Look skipped: no key shelf")
             return
@@ -250,37 +267,70 @@ public final class AppCoordinator {
             log.debug("Quick Look skipped: no view model")
             return
         }
-        let targetItem = viewModel.quickLookTargetItem
-        guard let item = targetItem else {
-            log.debug("Quick Look skipped: shelf has no items")
+
+        let targets = viewModel.quickLookTargetItems
+        let previewURLs = collectQuickLookPreviewURLs(from: targets)
+
+        guard !previewURLs.resolutions.isEmpty || !previewURLs.unscopedURLs.isEmpty else {
+            log.debug("Quick Look skipped: no previewable items in selection")
             return
         }
 
+        quickLook.show(
+            bookmarkResolutions: previewURLs.resolutions,
+            unscopedURLs: previewURLs.unscopedURLs
+        )
+    }
+
+    private func collectQuickLookPreviewURLs(
+        from items: [ShelfItem]
+    ) -> (resolutions: [BookmarkResolver.Resolution], unscopedURLs: [URL]) {
+        var resolutions: [BookmarkResolver.Resolution] = []
+        var unscopedURLs: [URL] = []
+
+        for item in items {
+            appendQuickLookPreviewURL(for: item, resolutions: &resolutions, unscopedURLs: &unscopedURLs)
+        }
+
+        return (resolutions, unscopedURLs)
+    }
+
+    private func appendQuickLookPreviewURL(
+        for item: ShelfItem,
+        resolutions: inout [BookmarkResolver.Resolution],
+        unscopedURLs: inout [URL]
+    ) {
         switch item.kind {
         case .fileBookmark(let record):
             do {
                 let resolution = try bookmarkResolver.resolve(record)
-                quickLook.show(urls: [resolution.url])
-                // Do not release here; Quick Look needs the access scope until replacement or close.
+                resolutions.append(resolution)
             } catch {
-                log.warning("Quick Look bookmark resolve failed: \(String(describing: error), privacy: .public)")
+                log.warning("Quick Look bookmark resolve failed for id=\(item.id.rawValue.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
             }
 
         case .clipboardImage(let filename):
-            if let appSupport = FileManager.default.urls(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first {
-                let url = appSupport
-                    .appendingPathComponent("Shelf", isDirectory: true)
-                    .appendingPathComponent("clipboard-images", isDirectory: true)
-                    .appendingPathComponent(filename)
-                quickLook.show(urls: [url])
+            if let url = clipboardImageURL(filename: filename) {
+                unscopedURLs.append(url)
             }
 
         case .webURL, .text:
-            log.debug("Quick Look skipped for non-file item kind")
+            break
         }
+    }
+
+    private func clipboardImageURL(filename: String) -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            return nil
+        }
+        let url = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func handleDragOutEnded(_ result: DragOutResult) {
