@@ -144,7 +144,7 @@ public final class AppCoordinator {
                 viewModel?.setExpanded(false)
             },
             onClose: { [weak self] in
-                self?.windowManager.closeShelf()
+                self?.clearAndCloseShelf()
             }
         )
         let base = PanelPositioner.computeOrigin(
@@ -178,6 +178,11 @@ public final class AppCoordinator {
             self.removeItems(selection)
             return true
         }
+    }
+
+    private func clearAndCloseShelf() {
+        shelfStore.remove()
+        windowManager.closeShelf()
     }
 
     private func publishActiveShelfToMenu() {
