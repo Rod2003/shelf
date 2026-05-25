@@ -241,7 +241,7 @@ public struct ShelfContentView: View {
 }
 
 private struct StackedShelfView: View {
-    private static let pillBottomPadding: CGFloat = 12
+    private static let pillBottomPadding: CGFloat = 6
     private static let pillHorizontalPadding: CGFloat = 14
     private static let stackDragOutSize = CGSize(width: 104, height: 104)
 
