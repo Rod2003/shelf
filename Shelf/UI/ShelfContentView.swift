@@ -568,7 +568,6 @@ private struct ShelfDrawerView: View {
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     let onDeleteItems: ((Set<ItemID>) -> Void)?
     let onCollapseRequested: (() -> Void)?
-    @FocusState private var isFocused: Bool
 
     private let columns = [
         GridItem(.flexible(minimum: 96, maximum: 120), spacing: 8),
@@ -617,26 +616,6 @@ private struct ShelfDrawerView: View {
             .padding(.horizontal, 14)
             .padding(.top, 42)
             .padding(.bottom, 12)
-        }
-        .focusable(true)
-        .focused($isFocused)
-        .onAppear { isFocused = true }
-        .onChange(of: viewModel.isExpanded) { _, expanded in
-            isFocused = expanded
-        }
-        .onKeyPress(.delete) {
-            guard !viewModel.drawerSelection.isEmpty else { return .handled }
-            let selection = viewModel.drawerSelection
-            viewModel.removeAll(itemIDs: selection)
-            if viewModel.items.isEmpty {
-                viewModel.setExpanded(false)
-            }
-            onDeleteItems?(selection)
-            return .handled
-        }
-        .onKeyPress(.escape) {
-            onCollapseRequested?()
-            return .handled
         }
     }
 

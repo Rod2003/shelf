@@ -10,13 +10,32 @@ public protocol ShelfWindowControllerDelegate: AnyObject {
     func shelfWindowDidResignKey(_ controller: ShelfWindowController)
 }
 
+public final class ShelfKeyHandlingPanel: NSPanel {
+    /// Return true to consume; false to let the responder chain handle it.
+    public var onKeyDown: ((NSEvent) -> Bool)?
+
+    public override var canBecomeKey: Bool { true }
+    public override var canBecomeMain: Bool { false }
+    public override var acceptsFirstResponder: Bool { true }
+
+    public override func keyDown(with event: NSEvent) {
+        if onKeyDown?(event) == true { return }
+        super.keyDown(with: event)
+    }
+}
+
 @MainActor
 public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public static let defaultPanelSize = CGSize(width: 180, height: 180)
 
     public let shelfID: ShelfGroupID
-    public let panel: NSPanel
+    public let panel: ShelfKeyHandlingPanel
     public weak var delegate: ShelfWindowControllerDelegate?
+
+    public var onKeyDown: ((NSEvent) -> Bool)? {
+        get { panel.onKeyDown }
+        set { panel.onKeyDown = newValue }
+    }
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 
@@ -29,7 +48,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         self.shelfID = shelfID
 
         let frame = NSRect(origin: atOrigin, size: panelSize)
-        let panel = NSPanel(
+        let panel = ShelfKeyHandlingPanel(
             contentRect: frame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,

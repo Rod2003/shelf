@@ -144,7 +144,7 @@ public final class AppCoordinator {
                 viewModel?.setExpanded(false)
             },
             onClose: { [weak self] in
-                self?.windowManager.closeShelf()
+                self?.clearAndCloseShelf()
             }
         )
         let base = PanelPositioner.computeOrigin(
@@ -157,8 +157,32 @@ public final class AppCoordinator {
             baseOrigin: base
         )
         wireWindowAnimation(viewModel)
+        wireKeyHandling(viewModel)
         publishActiveShelfToMenu()
         log.info("Showed shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
+    }
+
+    private func wireKeyHandling(_ viewModel: ShelfViewModel) {
+        guard let controller = windowManager.shelfController() else { return }
+        controller.onKeyDown = { [weak self, weak viewModel] event in
+            guard let self, let viewModel else { return false }
+            // 51 = Delete (backspace), 117 = Forward Delete
+            guard event.keyCode == 51 || event.keyCode == 117 else { return false }
+            guard viewModel.isExpanded else { return false }
+            let selection = viewModel.drawerSelection
+            guard !selection.isEmpty else { return true }
+            viewModel.removeAll(itemIDs: selection)
+            if viewModel.items.isEmpty {
+                viewModel.setExpanded(false)
+            }
+            self.removeItems(selection)
+            return true
+        }
+    }
+
+    private func clearAndCloseShelf() {
+        shelfStore.remove()
+        windowManager.closeShelf()
     }
 
     private func publishActiveShelfToMenu() {
