@@ -243,6 +243,10 @@ public final class AppCoordinator {
     }
 
     private func invokeQuickLookForKeyShelf() {
+        if quickLook.closeIfVisible() {
+            return
+        }
+
         guard windowManager.isShelfKey() else {
             log.debug("Quick Look skipped: no key shelf")
             return

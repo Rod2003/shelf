@@ -51,6 +51,19 @@ public final class QuickLookCoordinator: NSObject {
         log.info("Quick Look opened with \(urls.count, privacy: .public) item(s)")
     }
 
+    @discardableResult
+    public func closeIfVisible() -> Bool {
+        let panel = QLPreviewPanel.shared()
+        guard !currentURLs.isEmpty, panel?.isVisible == true else {
+            return false
+        }
+        panel?.close()
+        releaseHeldResolutions()
+        currentURLs = []
+        log.info("Quick Look closed from Space toggle")
+        return true
+    }
+
     private func installCloseObserverIfNeeded(panel: QLPreviewPanel) {
         guard observer == nil else { return }
         observer = NotificationCenter.default.addObserver(
