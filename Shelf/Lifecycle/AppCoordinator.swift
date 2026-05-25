@@ -37,7 +37,7 @@ public final class AppCoordinator {
         self.shakeDetector = ShakeDetector(config: .defaultMedium)
         self.menuBar = MenuBarController()
         self.windowManager = ShelfWindowManager()
-        self.quickLook = QuickLookCoordinator()
+        self.quickLook = QuickLookCoordinator(resolver: bookmarkResolver)
     }
 
     public func bootstrap() {
@@ -251,36 +251,56 @@ public final class AppCoordinator {
             log.debug("Quick Look skipped: no view model")
             return
         }
-        guard let item = viewModel.quickLookTargetItems.first else {
+
+        let targets = viewModel.quickLookTargetItems
+        guard !targets.isEmpty else {
             log.debug("Quick Look skipped: no target items")
             return
         }
 
-        switch item.kind {
-        case .fileBookmark(let record):
-            do {
-                let resolution = try bookmarkResolver.resolve(record)
-                quickLook.show(urls: [resolution.url])
-                // Do not release here; Quick Look needs the access scope until replacement or close.
-            } catch {
-                log.warning("Quick Look bookmark resolve failed: \(String(describing: error), privacy: .public)")
-            }
+        var resolutions: [BookmarkResolver.Resolution] = []
+        var unscopedURLs: [URL] = []
 
-        case .clipboardImage(let filename):
-            if let appSupport = FileManager.default.urls(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first {
-                let url = appSupport
-                    .appendingPathComponent("Shelf", isDirectory: true)
-                    .appendingPathComponent("clipboard-images", isDirectory: true)
-                    .appendingPathComponent(filename)
-                quickLook.show(urls: [url])
-            }
+        for item in targets {
+            switch item.kind {
+            case .fileBookmark(let record):
+                do {
+                    let resolution = try bookmarkResolver.resolve(record)
+                    resolutions.append(resolution)
+                } catch {
+                    log.warning("Quick Look bookmark resolve failed for id=\(item.id.rawValue.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
+                }
 
-        case .webURL, .text:
-            log.debug("Quick Look skipped for non-file item kind")
+            case .clipboardImage(let filename):
+                if let url = clipboardImageURL(filename: filename) {
+                    unscopedURLs.append(url)
+                }
+
+            case .webURL, .text:
+                continue
+            }
         }
+
+        guard !resolutions.isEmpty || !unscopedURLs.isEmpty else {
+            log.debug("Quick Look skipped: no previewable items in selection")
+            return
+        }
+
+        quickLook.show(bookmarkResolutions: resolutions, unscopedURLs: unscopedURLs)
+    }
+
+    private func clipboardImageURL(filename: String) -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            return nil
+        }
+        let url = appSupport
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("clipboard-images", isDirectory: true)
+            .appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func handleDragOutEnded(_ result: DragOutResult) {
