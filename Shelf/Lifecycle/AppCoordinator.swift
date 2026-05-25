@@ -251,9 +251,8 @@ public final class AppCoordinator {
             log.debug("Quick Look skipped: no view model")
             return
         }
-        let targetItem = viewModel.quickLookTargetItem
-        guard let item = targetItem else {
-            log.debug("Quick Look skipped: shelf has no items")
+        guard let item = viewModel.quickLookTargetItems.first else {
+            log.debug("Quick Look skipped: no target items")
             return
         }
 

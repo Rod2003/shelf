@@ -157,14 +157,11 @@ public final class ShelfViewModel: ObservableObject {
         selectedItemID = itemID
     }
 
-    public var quickLookTargetItem: ShelfItem? {
-        let targetID: ItemID?
+    public var quickLookTargetItems: [ShelfItem] {
         if isExpanded {
-            targetID = drawerActiveSelectionID ?? drawerSelection.first
-        } else {
-            targetID = selectedItemID
+            return items.filter { drawerSelection.contains($0.id) }
         }
-        return targetID.flatMap { id in items.first(where: { $0.id == id }) } ?? items.first
+        return items
     }
 
     public func reorder(from source: Int, to destination: Int) {
