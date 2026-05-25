@@ -150,6 +150,11 @@ public struct ShelfContentView: View {
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        guard !DragItemFactory.containsInternalShelfDrag(providers) else {
+            viewModel.setDropTargeted(false)
+            return false
+        }
+
         Task { @MainActor in
             let items = await DragItemFactory.makeItems(from: providers)
             if !items.isEmpty {

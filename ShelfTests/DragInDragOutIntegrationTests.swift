@@ -173,6 +173,16 @@ final class DragInDragOutIntegrationTests: XCTestCase {
         let items = DragItemFactory.makeItems(from: pb)
         XCTAssertEqual(items.count, 0)
     }
+    func testInternalShelfPasteboardDragYieldsNoItems() throws {
+        let file = try makeTempFile(name: "internal-drag.txt")
+        let pb = makeIsolatedPasteboard()
+        pb.writeObjects([file as NSURL])
+        pb.setString("1", forType: DragItemFactory.internalShelfDragType)
+
+        let items = DragItemFactory.makeItems(from: pb)
+
+        XCTAssertEqual(items.count, 0)
+    }
     func testSwiftUIDropFileURLPrecedenceOverString() async throws {
         let file = try makeTempFile(name: "provider-precedence.txt")
         let fileProvider = NSItemProvider(object: file as NSURL)
@@ -185,6 +195,22 @@ final class DragInDragOutIntegrationTests: XCTestCase {
             return XCTFail("expected .fileBookmark, got \(items[0].kind)")
         }
         XCTAssertEqual(record.originalPath, file.path)
+    }
+    func testSwiftUIInternalShelfProviderDragYieldsNoItems() async throws {
+        let file = try makeTempFile(name: "provider-internal-drag.txt")
+        let fileProvider = NSItemProvider(object: file as NSURL)
+        let markerProvider = NSItemProvider()
+        markerProvider.registerDataRepresentation(
+            forTypeIdentifier: DragItemFactory.internalShelfDragTypeIdentifier,
+            visibility: .all
+        ) { completion in
+            completion(Data("1".utf8), nil)
+            return nil
+        }
+
+        let items = await DragItemFactory.makeItems(from: [fileProvider, markerProvider])
+
+        XCTAssertEqual(items.count, 0)
     }
     func testSwiftUIDropImageDataProducesClipboardImageItem() async throws {
         let data = try makePNGData()

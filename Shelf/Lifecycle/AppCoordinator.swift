@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import CryptoKit
 import OSLog
 import ShelfCore
 
@@ -43,6 +44,7 @@ public final class AppCoordinator {
     public func bootstrap() {
         defaultsBackend.ensureApplicationSupport()
         wireCallbacks()
+        deduplicateStoredShelf()
         sweepOrphanedManagedFiles()
         shakeDetector.start()
         log.info("AppCoordinator bootstrapped")
@@ -202,15 +204,101 @@ public final class AppCoordinator {
     }
 
     private func appendItems(_ items: [ShelfItem]) {
+        guard let currentShelf = shelfStore.current() else {
+            log.warning("Drop append skipped because shelf is missing")
+            return
+        }
+
+        let uniqueItems = uniqueItemsForAppend(items, existingItems: currentShelf.items)
+        let insertedCount = uniqueItems.count
+        let skippedDuplicateCount = items.count - uniqueItems.count
+
         shelfStore.update { shelf in
-            shelf.items.insert(contentsOf: items, at: 0)
+            guard !uniqueItems.isEmpty else { return }
+            shelf.items.insert(contentsOf: uniqueItems, at: 0)
             shelf.lastUsedAt = Date()
         }
         if let updated = shelfStore.current(),
            let viewModel {
             viewModel.reload(from: updated)
         }
-        log.info("Appended \(items.count, privacy: .public) item(s) to shelf")
+        log.info(
+            "Appended \(insertedCount, privacy: .public) item(s) to shelf; skipped \(skippedDuplicateCount, privacy: .public) duplicate file item(s)"
+        )
+    }
+
+    private func uniqueItemsForAppend(_ items: [ShelfItem], existingItems: [ShelfItem]) -> [ShelfItem] {
+        var knownKeys = Set(existingItems.flatMap(duplicateKeys(for:)))
+        var uniqueItems: [ShelfItem] = []
+
+        for item in items {
+            let keys = duplicateKeys(for: item)
+            if !keys.isEmpty {
+                guard keys.isDisjoint(with: knownKeys) else { continue }
+                knownKeys.formUnion(keys)
+            }
+            uniqueItems.append(item)
+        }
+
+        return uniqueItems
+    }
+
+    private func deduplicateStoredShelf() {
+        guard let currentShelf = shelfStore.current() else { return }
+        let uniqueItems = uniqueItemsForAppend(currentShelf.items, existingItems: [])
+        let removedCount = currentShelf.items.count - uniqueItems.count
+        guard removedCount > 0 else { return }
+
+        shelfStore.update { shelf in
+            shelf.items = uniqueItems
+            shelf.lastUsedAt = Date()
+        }
+        log.info("Removed \(removedCount, privacy: .public) duplicate existing shelf item(s)")
+    }
+
+    private func duplicateKeys(for item: ShelfItem) -> Set<String> {
+        switch item.kind {
+        case .fileBookmark(let record):
+            return fileBookmarkDuplicateKeys(record)
+        case .clipboardImage(let filename):
+            guard let url = clipboardImageURL(filename: filename) else { return [] }
+            return fileDuplicateKeys(for: url)
+        case .webURL, .text:
+            return []
+        }
+    }
+
+    private func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
+        if !record.originalPath.isEmpty {
+            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
+        }
+
+        do {
+            let resolution = try bookmarkResolver.resolve(record)
+            defer { bookmarkResolver.release(resolution.url) }
+            return fileDuplicateKeys(for: resolution.url)
+        } catch {
+            log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
+    private func fileDuplicateKeys(for url: URL) -> Set<String> {
+        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
+        if let hash = fileContentHash(for: url) {
+            keys.insert("sha256:\(hash)")
+        }
+        return keys
+    }
+
+    private func normalizedFilePath(_ url: URL) -> String {
+        url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    private func fileContentHash(for url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private func removeItems(_ itemIDs: Set<ItemID>) {

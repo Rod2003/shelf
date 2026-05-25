@@ -43,15 +43,23 @@ public struct MultiDragOutResult: Sendable {
 fileprivate final class FilePromiseProviderWithURL: NSFilePromiseProvider {
     override func writableTypes(for pasteboard: NSPasteboard) -> [NSPasteboard.PasteboardType] {
         var types = super.writableTypes(for: pasteboard)
+        if isInternalShelfDrag { types.append(DragItemFactory.internalShelfDragType) }
         if hasFileURLString { types.append(.fileURL) }
         return types
     }
 
     override func pasteboardPropertyList(forType type: NSPasteboard.PasteboardType) -> Any? {
+        if type == DragItemFactory.internalShelfDragType, isInternalShelfDrag {
+            return "1"
+        }
         if type == .fileURL, let urlString = fileURLString {
             return urlString
         }
         return super.pasteboardPropertyList(forType: type)
+    }
+
+    private var isInternalShelfDrag: Bool {
+        (userInfo as? [String: Any])?["internalShelfDrag"] as? Bool == true
     }
 
     private var hasFileURLString: Bool {
@@ -415,13 +423,11 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
                 resolvedURL = nil
             }
 
-            let provider: NSFilePromiseProvider = (resolvedURL != nil)
-                ? FilePromiseProviderWithURL(fileType: typeIdentifier, delegate: self)
-                : NSFilePromiseProvider(fileType: typeIdentifier, delegate: self)
             var info: [String: Any] = [
                 "kind": "fileBookmark",
                 "record": record,
                 "displayName": item.displayName,
+                "internalShelfDrag": true,
             ]
             if includeItemID {
                 info["itemID"] = item.id.rawValue.uuidString
@@ -429,6 +435,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             if let url = resolvedURL {
                 info["fileURLString"] = url.absoluteString
             }
+            let provider = FilePromiseProviderWithURL(fileType: typeIdentifier, delegate: self)
             provider.userInfo = info
             return provider
 
@@ -445,12 +452,10 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
                 return FileManager.default.fileExists(atPath: url.path) ? url : nil
             }()
 
-            let provider: NSFilePromiseProvider = (resolvedURL != nil)
-                ? FilePromiseProviderWithURL(fileType: UTType.png.identifier, delegate: self)
-                : NSFilePromiseProvider(fileType: UTType.png.identifier, delegate: self)
             var info: [String: Any] = [
                 "kind": "clipboardImage",
                 "filename": filename,
+                "internalShelfDrag": true,
             ]
             if includeItemID {
                 info["itemID"] = item.id.rawValue.uuidString
@@ -458,17 +463,20 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             if let url = resolvedURL {
                 info["fileURLString"] = url.absoluteString
             }
+            let provider = FilePromiseProviderWithURL(fileType: UTType.png.identifier, delegate: self)
             provider.userInfo = info
             return provider
 
         case .webURL(let url):
             let pbItem = NSPasteboardItem()
+            pbItem.setString("1", forType: DragItemFactory.internalShelfDragType)
             pbItem.setString(url.absoluteString, forType: .URL)
             pbItem.setString(url.absoluteString, forType: .string)
             return pbItem
 
         case .text(let text):
             let pbItem = NSPasteboardItem()
+            pbItem.setString("1", forType: DragItemFactory.internalShelfDragType)
             pbItem.setString(text, forType: .string)
             return pbItem
         }
@@ -489,7 +497,14 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        return [.move, .copy, .generic, .link]
+        switch context {
+        case .withinApplication:
+            return []
+        case .outsideApplication:
+            return [.move, .copy, .generic, .link]
+        @unknown default:
+            return [.copy]
+        }
     }
 
     public func draggingSession(
