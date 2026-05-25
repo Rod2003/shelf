@@ -125,12 +125,23 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
             completion?()
             return
         }
+        // Opt out of App Nap / background throttling for the duration of the
+        // animation. Shelf is LSUIElement/.accessory driving a nonactivating
+        // panel, so it's a prime throttling candidate when the system is busy
+        // (e.g. screen recording), which visibly slows the frame animation.
+        let activityToken = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiatedAllowingIdleSystemSleep],
+            reason: "Shelf panel resize animation"
+        )
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = duration
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.32, 0.94, 0.36, 1.0)
             context.allowsImplicitAnimation = true
             panel.animator().setFrame(targetFrame, display: true)
-        }, completionHandler: completion)
+        }, completionHandler: {
+            ProcessInfo.processInfo.endActivity(activityToken)
+            completion?()
+        })
     }
 
     private func frame(for targetSize: CGSize) -> NSRect {
