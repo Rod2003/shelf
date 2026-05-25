@@ -125,6 +125,10 @@ public final class DragInView: NSView {
     }
 
     private func hasAcceptableContent(in pasteboard: NSPasteboard) -> Bool {
+        guard !DragItemFactory.isInternalShelfDrag(pasteboard) else {
+            return false
+        }
+
         let advertised = pasteboard.types ?? []
         for type in Self.acceptedTypes {
             if advertised.contains(type) {

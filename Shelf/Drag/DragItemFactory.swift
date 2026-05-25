@@ -31,8 +31,15 @@ public enum DragItemFactory {
         .plainText,
         .text
     ]
+    public static let internalShelfDragType = NSPasteboard.PasteboardType("dev.rod.shelf.internal-drag")
+    public static let internalShelfDragTypeIdentifier = internalShelfDragType.rawValue
 
     public static func makeItems(from pasteboard: NSPasteboard) -> [ShelfItem] {
+        guard !isInternalShelfDrag(pasteboard) else {
+            log.debug("makeItems: ignoring internal Shelf drag")
+            return []
+        }
+
         // File URLs must win over `.string`; Safari-style drags often publish both.
         if let urls = readFileURLs(from: pasteboard), !urls.isEmpty {
             let items = urls.compactMap { DropItemBuilder.makeFileBookmarkItem(from: $0) }
@@ -64,6 +71,11 @@ public enum DragItemFactory {
     }
 
     public static func makeItems(from providers: [NSItemProvider]) async -> [ShelfItem] {
+        guard !containsInternalShelfDrag(providers) else {
+            log.debug("makeItems: ignoring internal Shelf provider drag")
+            return []
+        }
+
         if let urls = await readFileURLs(from: providers), !urls.isEmpty {
             let items = urls.compactMap { DropItemBuilder.makeFileBookmarkItem(from: $0) }
             log.info("makeItems: \(items.count, privacy: .public) fileBookmark item(s) from SwiftUI drop")
@@ -89,6 +101,21 @@ public enum DragItemFactory {
 
         log.debug("makeItems: SwiftUI drop providers advertised no extractable content")
         return []
+    }
+
+    public static func isInternalShelfDrag(_ pasteboard: NSPasteboard) -> Bool {
+        let advertised = pasteboard.types ?? []
+        if advertised.contains(internalShelfDragType) {
+            return true
+        }
+        return pasteboard.canReadItem(withDataConformingToTypes: [internalShelfDragTypeIdentifier])
+    }
+
+    public static func containsInternalShelfDrag(_ providers: [NSItemProvider]) -> Bool {
+        providers.contains { provider in
+            provider.registeredTypeIdentifiers.contains(internalShelfDragTypeIdentifier)
+                || provider.hasItemConformingToTypeIdentifier(internalShelfDragTypeIdentifier)
+        }
     }
 
     private static func readFileURLs(from pasteboard: NSPasteboard) -> [URL]? {
