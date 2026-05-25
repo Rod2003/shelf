@@ -16,9 +16,9 @@
 		1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */; };
 		206F9D67EC5F24562DAF3B3D /* QuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B5BDFF83FD8506E84EA798 /* QuickLookCoordinator.swift */; };
 		2488D85FA07A1F7021A1F0E2 /* ShelfWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A266B1AD6FB399CB6EFD074F /* ShelfWindowManager.swift */; };
+		2B816E145C07810DC58750BB /* ShelfViewModelQuickLookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11614C1BC86623FBBFC6BC9 /* ShelfViewModelQuickLookTests.swift */; };
 		52EA7E375D5D7EB46112E347 /* WindowDragHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F840645DF9CA67A0DC5C7731 /* WindowDragHandle.swift */; };
 		548EBD8895AB9CCE6FC48509 /* ShelfWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975B7DBEEB0705424B1F593F /* ShelfWindowController.swift */; };
-		57C755D3494FEF8BD7C801B4 /* LiquidGlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8626F4ACD2A8E8A539B6F4E /* LiquidGlassStyle.swift */; };
 		58941865293EABA9E328B014 /* DefaultsBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCBC42A0A5FC5B077472D342 /* DefaultsBackend.swift */; };
 		59BB2547B9DC60CC415D6088 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC303335B537BC2084DE0AC7 /* ShakeDetector.swift */; };
 		6093F6DBFC90938CC41C91B1 /* ShelfApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */; };
@@ -37,6 +37,7 @@
 		D0DB7537281A86E26C56476C /* ShelfViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C58EA9E17445AA8D21FBA04 /* ShelfViewModel.swift */; };
 		D440701383CD44D39E332869 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AECD059305CC2A346F187B /* HotkeyManager.swift */; };
 		DB7F7775B6DBBA79035EFB95 /* ShelfContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC36DCF7107668303D2218A4 /* ShelfContentView.swift */; };
+		DF0A2890354CA4DB6D695686 /* LiquidGlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */; };
 		DFC1336B119555D27CDCCB0A /* PersistenceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9285D0BEF5CDDAF194E923E6 /* PersistenceIntegrationTests.swift */; };
 		E4D56C89F0BDE14D824A9178 /* DisplayChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007C9A73EDBE5752206EF94 /* DisplayChangeTests.swift */; };
 		FDD7DB4F0EE7BFF8670DF8B7 /* DragOutSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27FF0B3E8BE78EDA796765A /* DragOutSource.swift */; };
@@ -75,10 +76,11 @@
 		975B7DBEEB0705424B1F593F /* ShelfWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfWindowController.swift; sourceTree = "<group>"; };
 		9AC8A686F7D6912CA8488F09 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A266B1AD6FB399CB6EFD074F /* ShelfWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfWindowManager.swift; sourceTree = "<group>"; };
+		A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassStyle.swift; sourceTree = "<group>"; };
 		A7BA7449A7ED3543AAD7A801 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AEE65A95AA9D516A78DF7D9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B11614C1BC86623FBBFC6BC9 /* ShelfViewModelQuickLookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfViewModelQuickLookTests.swift; sourceTree = "<group>"; };
 		B27FF0B3E8BE78EDA796765A /* DragOutSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOutSource.swift; sourceTree = "<group>"; };
-		B8626F4ACD2A8E8A539B6F4E /* LiquidGlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassStyle.swift; sourceTree = "<group>"; };
 		C434CA69BBA8550DF6E411AC /* Shelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D007C9A73EDBE5752206EF94 /* DisplayChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayChangeTests.swift; sourceTree = "<group>"; };
@@ -129,7 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				6C102C1C710EEA7F9FC192B4 /* ContentViewFactory.swift */,
-				B8626F4ACD2A8E8A539B6F4E /* LiquidGlassStyle.swift */,
+				A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */,
 				2A45426C0FA45A365BEDD0D1 /* NoWindowDragOverlay.swift */,
 				EC36DCF7107668303D2218A4 /* ShelfContentView.swift */,
 				017371AE4855A7F2EC90E101 /* ShelfItemView.swift */,
@@ -157,6 +159,7 @@
 				2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */,
 				4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */,
 				9285D0BEF5CDDAF194E923E6 /* PersistenceIntegrationTests.swift */,
+				B11614C1BC86623FBBFC6BC9 /* ShelfViewModelQuickLookTests.swift */,
 			);
 			path = ShelfTests;
 			sourceTree = "<group>";
@@ -337,6 +340,7 @@
 				1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */,
 				C493CF244A5E1DE46525FF95 /* PanelPositionerTests.swift in Sources */,
 				DFC1336B119555D27CDCCB0A /* PersistenceIntegrationTests.swift in Sources */,
+				2B816E145C07810DC58750BB /* ShelfViewModelQuickLookTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,7 +359,7 @@
 				FDD7DB4F0EE7BFF8670DF8B7 /* DragOutSource.swift in Sources */,
 				195A5CD09E32AC949E7F5274 /* FilePromiseDelegate.swift in Sources */,
 				D440701383CD44D39E332869 /* HotkeyManager.swift in Sources */,
-				57C755D3494FEF8BD7C801B4 /* LiquidGlassStyle.swift in Sources */,
+				DF0A2890354CA4DB6D695686 /* LiquidGlassStyle.swift in Sources */,
 				C06BC9D5FA41DD7833A0B4E0 /* MenuBarController.swift in Sources */,
 				699A66100E294AC382A31397 /* NoWindowDragOverlay.swift in Sources */,
 				6DB3EFDE157406CD9DE407BC /* PanelPositioner.swift in Sources */,
