@@ -59,7 +59,7 @@ public final class AppCoordinator {
 
     private func wireCallbacks() {
         hotkeyManager.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor(wantsKey: true)
+            self?.showShelfAtCursor(wantsKey: false)
         }
         hotkeyManager.onCloseFrontmost = { [weak self] in
             guard let self else { return }
@@ -79,7 +79,7 @@ public final class AppCoordinator {
         }
 
         menuBar.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor(wantsKey: true)
+            self?.showShelfAtCursor(wantsKey: false)
         }
         menuBar.onFocusShelf = { [weak self] in
             self?.windowManager.focusShelf(wantsKey: true)
