@@ -59,7 +59,7 @@ public final class AppCoordinator {
 
     private func wireCallbacks() {
         hotkeyManager.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor(wantsKey: false)
+            self?.showShelfAtCursor()
         }
         hotkeyManager.onCloseFrontmost = { [weak self] in
             guard let self else { return }
@@ -75,11 +75,11 @@ public final class AppCoordinator {
         }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
-            self?.showShelfAtCursor(wantsKey: false)
+            self?.showShelfAtCursor()
         }
 
         menuBar.onShowShelf = { [weak self] in
-            self?.showShelfAtCursor(wantsKey: false)
+            self?.showShelfAtCursor()
         }
         menuBar.onFocusShelf = { [weak self] in
             self?.windowManager.focusShelf(wantsKey: true)
@@ -106,15 +106,23 @@ public final class AppCoordinator {
                 self.hotkeyManager.setEscEnabled(true)
                 return
             }
-            if !self.windowManager.isShelfKey() {
-                self.hotkeyManager.setEscEnabled(false)
-                self.hotkeyManager.setSpaceEnabled(false)
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                guard let self else { return }
+                guard self.windowManager.visibleShelfCount > 0 else { return }
+                guard !self.quickLook.isVisible else { return }
+                guard !self.windowManager.isShelfKey() else { return }
+                self.log.debug("Shelf resigned key while visible; restoring key focus")
+                self.windowManager.focusShelf()
             }
         }
         windowManager.onShelfClosed = { [weak self] in
-            self?.viewModel = nil
-            self?.collapsedSize = nil
-            self?.publishActiveShelfToMenu()
+            guard let self else { return }
+            self.hotkeyManager.setEscEnabled(false)
+            self.hotkeyManager.setSpaceEnabled(false)
+            self.viewModel = nil
+            self.collapsedSize = nil
+            self.publishActiveShelfToMenu()
         }
 
         shelfStore.onChange = { [weak self] in
@@ -124,10 +132,10 @@ public final class AppCoordinator {
         }
     }
 
-    private func showShelfAtCursor(wantsKey: Bool) {
+    private func showShelfAtCursor() {
         if windowManager.visibleShelfCount > 0 {
-            windowManager.focusShelf(wantsKey: wantsKey)
-            log.debug("Focused existing shelf wantsKey=\(wantsKey, privacy: .public)")
+            windowManager.focusShelf()
+            log.debug("Focused existing shelf")
             return
         }
 
@@ -174,7 +182,7 @@ public final class AppCoordinator {
             shelf.id,
             contentView: hosting,
             baseOrigin: base,
-            wantsKey: wantsKey
+            wantsKey: true
         )
         wireWindowAnimation(viewModel)
         wireKeyHandling(viewModel)
@@ -191,10 +199,6 @@ public final class AppCoordinator {
             guard viewModel.isExpanded else { return false }
             let selection = viewModel.drawerSelection
             guard !selection.isEmpty else { return true }
-            viewModel.removeAll(itemIDs: selection)
-            if viewModel.items.isEmpty {
-                viewModel.setExpanded(false)
-            }
             self.removeItems(selection)
             return true
         }
@@ -262,65 +266,27 @@ public final class AppCoordinator {
         log.info("Removed \(removedCount, privacy: .public) duplicate existing shelf item(s)")
     }
 
-    private func duplicateKeys(for item: ShelfItem) -> Set<String> {
-        switch item.kind {
-        case .fileBookmark(let record):
-            return fileBookmarkDuplicateKeys(record)
-        case .clipboardImage(let filename):
-            guard let url = clipboardImageURL(filename: filename) else { return [] }
-            return fileDuplicateKeys(for: url)
-        case .webURL, .text:
-            return []
-        }
-    }
-
-    private func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
-        if !record.originalPath.isEmpty {
-            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
-        }
-
-        do {
-            let resolution = try bookmarkResolver.resolve(record)
-            defer { bookmarkResolver.release(resolution.url) }
-            return fileDuplicateKeys(for: resolution.url)
-        } catch {
-            log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
-            return []
-        }
-    }
-
-    private func fileDuplicateKeys(for url: URL) -> Set<String> {
-        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
-        if let hash = fileContentHash(for: url) {
-            keys.insert("sha256:\(hash)")
-        }
-        return keys
-    }
-
-    private func normalizedFilePath(_ url: URL) -> String {
-        url.standardizedFileURL.resolvingSymlinksInPath().path
-    }
-
-    private func fileContentHash(for url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
-    }
-
     private func removeItems(_ itemIDs: Set<ItemID>) {
         guard !itemIDs.isEmpty else { return }
         shelfStore.update { shelf in
             shelf.items.removeAll { itemIDs.contains($0.id) }
             shelf.lastUsedAt = Date()
         }
-        if let updated = shelfStore.current(),
-           let viewModel {
+        if let updated = shelfStore.current() {
             if updated.items.isEmpty {
-                viewModel.setExpanded(false)
+                removeEmptyShelf()
+                return
             }
-            viewModel.reload(from: updated)
+            viewModel?.reload(from: updated)
         }
         log.info("Removed \(itemIDs.count, privacy: .public) item(s) from shelf")
+    }
+
+    private func removeEmptyShelf() {
+        guard let current = shelfStore.current(), current.items.isEmpty else { return }
+        shelfStore.remove()
+        windowManager.closeShelf()
+        log.info("Removed empty shelf")
     }
 
     private func wireWindowAnimation(_ viewModel: ShelfViewModel) {
@@ -453,9 +419,12 @@ public final class AppCoordinator {
                 shelf.items.removeAll { $0.id == itemID }
                 shelf.lastUsedAt = Date()
             }
-            if let updated = shelfStore.current(),
-               let viewModel {
-                viewModel.reload(from: updated)
+            if let updated = shelfStore.current() {
+                if updated.items.isEmpty {
+                    removeEmptyShelf()
+                    return
+                }
+                viewModel?.reload(from: updated)
             }
             log.info(
                 "Drag-out MOVE completed id=\(itemID.rawValue.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public)"
@@ -492,12 +461,12 @@ public final class AppCoordinator {
             shelf.items.removeAll { confirmedIDs.contains($0.id) }
             shelf.lastUsedAt = Date()
         }
-        if let updated = shelfStore.current(),
-           let viewModel {
+        if let updated = shelfStore.current() {
             if updated.items.isEmpty {
-                viewModel.setExpanded(false)
+                removeEmptyShelf()
+                return
             }
-            viewModel.reload(from: updated)
+            viewModel?.reload(from: updated)
         }
         log.info("Multi drag-out removed \(confirmedIDs.count, privacy: .public) confirmed item(s) from shelf")
     }
@@ -565,5 +534,52 @@ public final class AppCoordinator {
                 log.info("Swept orphaned clipboard image \(entry.lastPathComponent, privacy: .public)")
             }
         }
+    }
+}
+
+private extension AppCoordinator {
+    func duplicateKeys(for item: ShelfItem) -> Set<String> {
+        switch item.kind {
+        case .fileBookmark(let record):
+            return fileBookmarkDuplicateKeys(record)
+        case .clipboardImage(let filename):
+            guard let url = clipboardImageURL(filename: filename) else { return [] }
+            return fileDuplicateKeys(for: url)
+        case .webURL, .text:
+            return []
+        }
+    }
+
+    func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
+        if !record.originalPath.isEmpty {
+            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
+        }
+
+        do {
+            let resolution = try bookmarkResolver.resolve(record)
+            defer { bookmarkResolver.release(resolution.url) }
+            return fileDuplicateKeys(for: resolution.url)
+        } catch {
+            log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
+    func fileDuplicateKeys(for url: URL) -> Set<String> {
+        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
+        if let hash = fileContentHash(for: url) {
+            keys.insert("sha256:\(hash)")
+        }
+        return keys
+    }
+
+    func normalizedFilePath(_ url: URL) -> String {
+        url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    func fileContentHash(for url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

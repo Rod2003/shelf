@@ -54,7 +54,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.level = .floating
+        panel.level = .statusBar
         panel.collectionBehavior = [.fullScreenAuxiliary, .canJoinAllSpaces]
         // Keep false so SwiftUI taps make the nonactivating panel key.
         panel.becomesKeyOnlyIfNeeded = false
@@ -81,12 +81,9 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
     }
 
-    public func show(wantsKey: Bool = false) {
-        if wantsKey {
-            panel.makeKeyAndOrderFront(nil)
-        } else {
-            panel.orderFrontRegardless()
-        }
+    public func show(wantsKey: Bool = true) {
+        panel.orderFrontRegardless()
+        panel.makeKey()
         log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public) wantsKey=\(wantsKey, privacy: .public)")
     }
 
