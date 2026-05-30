@@ -31,7 +31,18 @@ private struct QuickLookSourceFrameReporter: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: QuickLookSourceFrameReportingView, coordinator: ()) {
-        nsView.report(nil)
+        // Clear the reported frame, but never synchronously: dismantle runs
+        // inside SwiftUI's view-graph teardown (NSHostingView deinit), and
+        // mutating the observed view model here re-enters the graph mid-
+        // invalidation, tripping Swift's exclusivity enforcement (SIGABRT).
+        // Defer to the next main-loop tick so the mutation lands outside
+        // teardown. Capture the closure/ids so we don't touch the dismantled
+        // view afterwards.
+        let onChange = nsView.onChange
+        let itemIDs = nsView.itemIDs
+        DispatchQueue.main.async {
+            onChange?(itemIDs, nil)
+        }
     }
 }
 
