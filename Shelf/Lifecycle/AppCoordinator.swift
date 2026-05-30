@@ -266,51 +266,6 @@ public final class AppCoordinator {
         log.info("Removed \(removedCount, privacy: .public) duplicate existing shelf item(s)")
     }
 
-    private func duplicateKeys(for item: ShelfItem) -> Set<String> {
-        switch item.kind {
-        case .fileBookmark(let record):
-            return fileBookmarkDuplicateKeys(record)
-        case .clipboardImage(let filename):
-            guard let url = clipboardImageURL(filename: filename) else { return [] }
-            return fileDuplicateKeys(for: url)
-        case .webURL, .text:
-            return []
-        }
-    }
-
-    private func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
-        if !record.originalPath.isEmpty {
-            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
-        }
-
-        do {
-            let resolution = try bookmarkResolver.resolve(record)
-            defer { bookmarkResolver.release(resolution.url) }
-            return fileDuplicateKeys(for: resolution.url)
-        } catch {
-            log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
-            return []
-        }
-    }
-
-    private func fileDuplicateKeys(for url: URL) -> Set<String> {
-        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
-        if let hash = fileContentHash(for: url) {
-            keys.insert("sha256:\(hash)")
-        }
-        return keys
-    }
-
-    private func normalizedFilePath(_ url: URL) -> String {
-        url.standardizedFileURL.resolvingSymlinksInPath().path
-    }
-
-    private func fileContentHash(for url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
-    }
-
     private func removeItems(_ itemIDs: Set<ItemID>) {
         guard !itemIDs.isEmpty else { return }
         shelfStore.update { shelf in
@@ -579,5 +534,52 @@ public final class AppCoordinator {
                 log.info("Swept orphaned clipboard image \(entry.lastPathComponent, privacy: .public)")
             }
         }
+    }
+}
+
+private extension AppCoordinator {
+    func duplicateKeys(for item: ShelfItem) -> Set<String> {
+        switch item.kind {
+        case .fileBookmark(let record):
+            return fileBookmarkDuplicateKeys(record)
+        case .clipboardImage(let filename):
+            guard let url = clipboardImageURL(filename: filename) else { return [] }
+            return fileDuplicateKeys(for: url)
+        case .webURL, .text:
+            return []
+        }
+    }
+
+    func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
+        if !record.originalPath.isEmpty {
+            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
+        }
+
+        do {
+            let resolution = try bookmarkResolver.resolve(record)
+            defer { bookmarkResolver.release(resolution.url) }
+            return fileDuplicateKeys(for: resolution.url)
+        } catch {
+            log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
+    func fileDuplicateKeys(for url: URL) -> Set<String> {
+        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
+        if let hash = fileContentHash(for: url) {
+            keys.insert("sha256:\(hash)")
+        }
+        return keys
+    }
+
+    func normalizedFilePath(_ url: URL) -> String {
+        url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    func fileContentHash(for url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
