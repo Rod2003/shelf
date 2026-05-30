@@ -331,47 +331,49 @@ public final class AppCoordinator {
         let targets = viewModel.quickLookTargetItems
         let previewURLs = collectQuickLookPreviewURLs(from: targets)
 
-        guard !previewURLs.resolutions.isEmpty || !previewURLs.unscopedURLs.isEmpty else {
+        guard !previewURLs.previews.isEmpty else {
             log.debug("Quick Look skipped: no previewable items in selection")
             return
         }
 
         quickLook.show(
+            previews: previewURLs.previews,
             bookmarkResolutions: previewURLs.resolutions,
-            unscopedURLs: previewURLs.unscopedURLs
+            sourceFramesByItemID: viewModel.quickLookSourceFrames
         )
     }
 
     private func collectQuickLookPreviewURLs(
         from items: [ShelfItem]
-    ) -> (resolutions: [BookmarkResolver.Resolution], unscopedURLs: [URL]) {
+    ) -> (resolutions: [BookmarkResolver.Resolution], previews: [QuickLookCoordinator.Preview]) {
         var resolutions: [BookmarkResolver.Resolution] = []
-        var unscopedURLs: [URL] = []
+        var previews: [QuickLookCoordinator.Preview] = []
 
         for item in items {
-            appendQuickLookPreviewURL(for: item, resolutions: &resolutions, unscopedURLs: &unscopedURLs)
+            appendQuickLookPreviewURL(for: item, resolutions: &resolutions, previews: &previews)
         }
 
-        return (resolutions, unscopedURLs)
+        return (resolutions, previews)
     }
 
     private func appendQuickLookPreviewURL(
         for item: ShelfItem,
         resolutions: inout [BookmarkResolver.Resolution],
-        unscopedURLs: inout [URL]
+        previews: inout [QuickLookCoordinator.Preview]
     ) {
         switch item.kind {
         case .fileBookmark(let record):
             do {
                 let resolution = try bookmarkResolver.resolve(record)
                 resolutions.append(resolution)
+                previews.append(QuickLookCoordinator.Preview(itemID: item.id, url: resolution.url))
             } catch {
                 log.warning("Quick Look bookmark resolve failed for id=\(item.id.rawValue.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
             }
 
         case .clipboardImage(let filename):
             if let url = clipboardImageURL(filename: filename) {
-                unscopedURLs.append(url)
+                previews.append(QuickLookCoordinator.Preview(itemID: item.id, url: url))
             }
 
         case .webURL, .text:

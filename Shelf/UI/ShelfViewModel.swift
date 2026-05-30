@@ -23,6 +23,7 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var drawerSelection: Set<ItemID>
     @Published public var drawerActiveSelectionID: ItemID?
     @Published public var isDropTargeted: Bool
+    @Published public private(set) var quickLookSourceFrames: [ItemID: CGRect]
 
     public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
@@ -37,6 +38,7 @@ public final class ShelfViewModel: ObservableObject {
         self.drawerSelection = []
         self.drawerActiveSelectionID = nil
         self.isDropTargeted = false
+        self.quickLookSourceFrames = [:]
     }
 
     public func setExpanded(_ expanded: Bool) {
@@ -94,6 +96,7 @@ public final class ShelfViewModel: ObservableObject {
         }
         let liveIDs = Set(shelf.items.map(\.id))
         drawerSelection.formIntersection(liveIDs)
+        quickLookSourceFrames = quickLookSourceFrames.filter { liveIDs.contains($0.key) }
         if let active = drawerActiveSelectionID, !liveIDs.contains(active) {
             drawerActiveSelectionID = drawerSelection.first
         }
@@ -103,6 +106,7 @@ public final class ShelfViewModel: ObservableObject {
         items.removeAll { $0.id == itemID }
         if selectedItemID == itemID { selectedItemID = nil }
         drawerSelection.remove(itemID)
+        quickLookSourceFrames.removeValue(forKey: itemID)
         if drawerActiveSelectionID == itemID {
             drawerActiveSelectionID = drawerSelection.first
         }
@@ -115,6 +119,9 @@ public final class ShelfViewModel: ObservableObject {
             self.selectedItemID = nil
         }
         drawerSelection.subtract(itemIDs)
+        for itemID in itemIDs {
+            quickLookSourceFrames.removeValue(forKey: itemID)
+        }
         if let active = drawerActiveSelectionID, itemIDs.contains(active) {
             drawerActiveSelectionID = drawerSelection.first
         }
@@ -171,6 +178,23 @@ public final class ShelfViewModel: ObservableObject {
             return items.filter { drawerSelection.contains($0.id) }
         }
         return selectedItemID == nil ? [] : items
+    }
+
+    public func setQuickLookSourceFrame(_ frame: CGRect?, for itemIDs: [ItemID]) {
+        let liveIDs = Set(items.map(\.id))
+        var nextFrames = quickLookSourceFrames
+
+        for itemID in itemIDs where liveIDs.contains(itemID) {
+            if let frame, !frame.isNull, !frame.isEmpty {
+                nextFrames[itemID] = frame
+            } else {
+                nextFrames.removeValue(forKey: itemID)
+            }
+        }
+
+        if nextFrames != quickLookSourceFrames {
+            quickLookSourceFrames = nextFrames
+        }
     }
 
     public func reorder(from source: Int, to destination: Int) {
