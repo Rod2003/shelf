@@ -77,4 +77,18 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         let targets = vm.quickLookTargetItems
         XCTAssertEqual(targets.map(\.id), [shelf.items[1].id, shelf.items[3].id])
     }
+
+    func testQuickLookSourceFramesAreClearedWhenItemIsRemoved() {
+        let shelf = makeShelf(itemCount: 2)
+        let vm = ShelfViewModel(shelf: shelf)
+        let frame = CGRect(x: 10, y: 20, width: 30, height: 40)
+
+        vm.setQuickLookSourceFrame(frame, for: [shelf.items[0].id])
+
+        XCTAssertEqual(vm.quickLookSourceFrames[shelf.items[0].id], frame)
+
+        vm.remove(itemID: shelf.items[0].id)
+
+        XCTAssertNil(vm.quickLookSourceFrames[shelf.items[0].id])
+    }
 }

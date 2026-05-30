@@ -4,16 +4,45 @@ import OSLog
 import ShelfCore
 @MainActor
 public final class QuickLookCoordinator: NSObject {
+    public struct Preview {
+        public let itemID: ItemID
+        public let url: URL
+
+        public init(itemID: ItemID, url: URL) {
+            self.itemID = itemID
+            self.url = url
+        }
+    }
+
+    private final class PreviewItem: NSObject, QLPreviewItem {
+        let itemID: ItemID
+        let url: URL
+
+        init(itemID: ItemID, url: URL) {
+            self.itemID = itemID
+            self.url = url
+        }
+
+        var previewItemURL: URL? {
+            url
+        }
+
+        var previewItemTitle: String? {
+            url.lastPathComponent
+        }
+    }
+
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
     private let resolver: BookmarkResolver
-    private var currentURLs: [URL] = []
+    private var currentItems: [PreviewItem] = []
+    private var sourceFramesByItemID: [ItemID: CGRect] = [:]
     private var heldResolutions: [BookmarkResolver.Resolution] = []
     private var observer: NSObjectProtocol?
     private var keyMonitor: Any?
 
     public var onDidClose: (() -> Void)?
     public var isVisible: Bool {
-        !currentURLs.isEmpty && QLPreviewPanel.shared()?.isVisible == true
+        !currentItems.isEmpty && QLPreviewPanel.shared()?.isVisible == true
     }
 
     public init(resolver: BookmarkResolver) {
@@ -34,19 +63,21 @@ public final class QuickLookCoordinator: NSObject {
     }
 
     public func show(
+        previews: [Preview],
         bookmarkResolutions: [BookmarkResolver.Resolution],
-        unscopedURLs: [URL]
+        sourceFramesByItemID: [ItemID: CGRect]
     ) {
         releaseHeldResolutions()
 
-        let urls = bookmarkResolutions.map(\.url) + unscopedURLs
-        guard !urls.isEmpty else {
-            currentURLs = []
+        guard !previews.isEmpty else {
+            currentItems = []
+            self.sourceFramesByItemID = [:]
             QLPreviewPanel.shared().close()
             return
         }
 
-        currentURLs = urls
+        currentItems = previews.map { PreviewItem(itemID: $0.itemID, url: $0.url) }
+        self.sourceFramesByItemID = sourceFramesByItemID
         heldResolutions = bookmarkResolutions
 
         let panel = QLPreviewPanel.shared()!
@@ -56,20 +87,21 @@ public final class QuickLookCoordinator: NSObject {
         installKeyMonitorIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.reloadData()
-        log.info("Quick Look opened with \(urls.count, privacy: .public) item(s) panelKey=\(panel.isKeyWindow, privacy: .public)")
+        log.info("Quick Look opened with \(previews.count, privacy: .public) item(s) panelKey=\(panel.isKeyWindow, privacy: .public)")
     }
 
     @discardableResult
     public func closeIfVisible() -> Bool {
         let panel = QLPreviewPanel.shared()
-        guard !currentURLs.isEmpty, panel?.isVisible == true else {
-            log.debug("Quick Look close skipped: visible=\(panel?.isVisible == true, privacy: .public) currentURLCount=\(self.currentURLs.count, privacy: .public)")
+        guard !currentItems.isEmpty, panel?.isVisible == true else {
+            log.debug("Quick Look close skipped: visible=\(panel?.isVisible == true, privacy: .public) currentItemCount=\(self.currentItems.count, privacy: .public)")
             return false
         }
         log.info("Quick Look close requested panelKey=\(panel?.isKeyWindow == true, privacy: .public)")
         panel?.close()
         releaseHeldResolutions()
-        currentURLs = []
+        currentItems = []
+        sourceFramesByItemID = [:]
         log.info("Quick Look closed from Space toggle")
         return true
     }
@@ -113,7 +145,8 @@ public final class QuickLookCoordinator: NSObject {
         log.info("Quick Look panel did close")
         removeKeyMonitor()
         releaseHeldResolutions()
-        currentURLs = []
+        currentItems = []
+        sourceFramesByItemID = [:]
         onDidClose?()
     }
 
@@ -127,11 +160,11 @@ public final class QuickLookCoordinator: NSObject {
 
 extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDataSource {
     public func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
-        currentURLs.count
+        currentItems.count
     }
 
     public func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
-        currentURLs[index] as NSURL
+        currentItems[index]
     }
 }
 
@@ -144,5 +177,32 @@ extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDelegate {
         log.info("Quick Look Space intercepted by preview panel delegate")
         closeIfVisible()
         return true
+    }
+
+    public func previewPanel(
+        _ panel: QLPreviewPanel!,
+        sourceFrameOnScreenFor item: (any QLPreviewItem)!
+    ) -> NSRect {
+        guard
+            let previewItem = item as? PreviewItem,
+            let frame = sourceFramesByItemID[previewItem.itemID],
+            !frame.isEmpty
+        else {
+            return .zero
+        }
+        return frame
+    }
+
+    public func previewPanel(
+        _ panel: QLPreviewPanel!,
+        transitionImageFor item: (any QLPreviewItem)!,
+        contentRect: UnsafeMutablePointer<NSRect>!
+    ) -> Any! {
+        guard let previewItem = item as? PreviewItem else { return nil }
+        let image = NSWorkspace.shared.icon(forFile: previewItem.url.path)
+        if let contentRect {
+            contentRect.pointee = NSRect(origin: .zero, size: image.size)
+        }
+        return image
     }
 }

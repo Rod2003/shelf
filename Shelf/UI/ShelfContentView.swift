@@ -305,6 +305,9 @@ private struct StackedShelfView: View {
                             )
                             .allowsHitTesting(false)
                     )
+                    .quickLookSourceFrame(ids: viewModel.items.map(\.id)) { itemIDs, frame in
+                        viewModel.setQuickLookSourceFrame(frame, for: itemIDs)
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
 
@@ -641,6 +644,9 @@ private struct ShelfDrawerView: View {
                             )
                             .allowsHitTesting(false)
                     )
+                    .quickLookSourceFrame(ids: [item.id]) { itemIDs, frame in
+                        viewModel.setQuickLookSourceFrame(frame, for: itemIDs)
+                    }
                 }
             }
             .padding(.horizontal, 14)
