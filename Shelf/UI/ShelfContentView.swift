@@ -661,11 +661,6 @@ private final class QuickLookSourceFrameReportingView: NSView {
         scheduleReport()
     }
 
-    override func viewDidMoveToSuperview() {
-        super.viewDidMoveToSuperview()
-        scheduleReport()
-    }
-
     func scheduleReport() {
         guard !reportScheduled else { return }
         reportScheduled = true
