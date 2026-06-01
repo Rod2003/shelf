@@ -14,6 +14,10 @@ build/
 Packages/
 Package.resolved
 
+# Distribution artifacts
+*.app/
+*.dmg
+
 # Sisyphus planning artifacts (local-only, not shipped)
 .sisyphus/
 docs/

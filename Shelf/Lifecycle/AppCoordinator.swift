@@ -61,14 +61,6 @@ public final class AppCoordinator {
         hotkeyManager.onShowShelf = { [weak self] in
             self?.showShelfAtCursor()
         }
-        hotkeyManager.onCloseFrontmost = { [weak self] in
-            guard let self else { return }
-            guard self.windowManager.isShelfKey() else { return }
-            self.windowManager.closeShelf()
-        }
-        hotkeyManager.onQuickLook = { [weak self] in
-            self?.invokeQuickLookForKeyShelf()
-        }
         quickLook.onDidClose = { [weak self] in
             self?.log.info("Quick Look did close; restoring shelf focus")
             self?.windowManager.focusShelf(wantsKey: true)
@@ -91,35 +83,8 @@ public final class AppCoordinator {
             NSApp.terminate(nil)
         }
 
-        // Gate bare Space or it steals Space from every app.
-        windowManager.onShelfBecameKey = { [weak self] in
-            guard let self else { return }
-            self.log.debug("Shelf became key; enabling Esc/Space hotkeys")
-            self.hotkeyManager.setEscEnabled(true)
-            self.hotkeyManager.setSpaceEnabled(true)
-        }
-        windowManager.onShelfResignedKey = { [weak self] in
-            guard let self else { return }
-            self.log.debug("Shelf resigned key quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
-            guard !self.quickLook.isVisible else {
-                self.hotkeyManager.setSpaceEnabled(true)
-                self.hotkeyManager.setEscEnabled(true)
-                return
-            }
-            Task { @MainActor [weak self] in
-                await Task.yield()
-                guard let self else { return }
-                guard self.windowManager.visibleShelfCount > 0 else { return }
-                guard !self.quickLook.isVisible else { return }
-                guard !self.windowManager.isShelfKey() else { return }
-                self.log.debug("Shelf resigned key while visible; restoring key focus")
-                self.windowManager.focusShelf()
-            }
-        }
         windowManager.onShelfClosed = { [weak self] in
             guard let self else { return }
-            self.hotkeyManager.setEscEnabled(false)
-            self.hotkeyManager.setSpaceEnabled(false)
             self.viewModel = nil
             self.collapsedSize = nil
             self.publishActiveShelfToMenu()
@@ -192,15 +157,27 @@ public final class AppCoordinator {
 
     private func wireKeyHandling(_ viewModel: ShelfViewModel) {
         guard let controller = windowManager.shelfController() else { return }
+        // Handled locally by the panel, so these act only while the shelf is the
+        // key window — never as system-wide hotkeys that swallow keys globally.
+        // Keys also yield to focused text fields, which consume them first.
         controller.onKeyDown = { [weak self, weak viewModel] event in
-            guard let self, let viewModel else { return false }
-            // 51 = Delete (backspace), 117 = Forward Delete
-            guard event.keyCode == 51 || event.keyCode == 117 else { return false }
-            guard viewModel.isExpanded else { return false }
-            let selection = viewModel.drawerSelection
-            guard !selection.isEmpty else { return true }
-            self.removeItems(selection)
-            return true
+            guard let self else { return false }
+            switch event.keyCode {
+            case 53: // Esc — close the shelf
+                self.windowManager.closeShelf()
+                return true
+            case 49: // Space — toggle Quick Look for the focused shelf
+                self.invokeQuickLookForKeyShelf()
+                return true
+            case 51, 117: // Delete / Forward Delete — remove selection (expanded only)
+                guard let viewModel, viewModel.isExpanded else { return false }
+                let selection = viewModel.drawerSelection
+                guard !selection.isEmpty else { return true }
+                self.removeItems(selection)
+                return true
+            default:
+                return false
+            }
         }
     }
 

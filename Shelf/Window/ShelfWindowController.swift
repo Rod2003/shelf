@@ -6,8 +6,6 @@ import ShelfCore
 @MainActor
 public protocol ShelfWindowControllerDelegate: AnyObject {
     func shelfWindowDidClose(_ controller: ShelfWindowController)
-    func shelfWindowDidBecomeKey(_ controller: ShelfWindowController)
-    func shelfWindowDidResignKey(_ controller: ShelfWindowController)
 }
 
 public final class ShelfKeyHandlingPanel: NSPanel {
@@ -166,18 +164,6 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     nonisolated public func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
             self.delegate?.shelfWindowDidClose(self)
-        }
-    }
-
-    nonisolated public func windowDidBecomeKey(_ notification: Notification) {
-        Task { @MainActor in
-            self.delegate?.shelfWindowDidBecomeKey(self)
-        }
-    }
-
-    nonisolated public func windowDidResignKey(_ notification: Notification) {
-        Task { @MainActor in
-            self.delegate?.shelfWindowDidResignKey(self)
         }
     }
 }

@@ -11,10 +11,6 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
 
     public var onShelfClosed: (() -> Void)?
 
-    public var onShelfBecameKey: (() -> Void)?
-
-    public var onShelfResignedKey: (() -> Void)?
-
     public override init() {
         super.init()
         NotificationCenter.default.addObserver(
@@ -108,13 +104,5 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
         self.controller = nil
         log.info("Shelf panel released id=\(controller.shelfID.rawValue.uuidString, privacy: .public)")
         onShelfClosed?()
-    }
-
-    public func shelfWindowDidBecomeKey(_ controller: ShelfWindowController) {
-        onShelfBecameKey?()
-    }
-
-    public func shelfWindowDidResignKey(_ controller: ShelfWindowController) {
-        onShelfResignedKey?()
     }
 }

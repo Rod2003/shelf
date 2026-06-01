@@ -31,7 +31,11 @@ private struct QuickLookSourceFrameReporter: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: QuickLookSourceFrameReportingView, coordinator: ()) {
-        nsView.report(nil)
+        let onChange = nsView.onChange
+        let itemIDs = nsView.itemIDs
+        DispatchQueue.main.async {
+            onChange?(itemIDs, nil)
+        }
     }
 }
 
