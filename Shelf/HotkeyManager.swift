@@ -2,13 +2,14 @@ import AppKit
 import Carbon.HIToolbox
 import OSLog
 
-/// Register bare Space only while a shelf is key; Carbon avoids TCC prompts.
+/// Registers the global show-shelf hotkey (Cmd+Shift+Space); Carbon avoids TCC
+/// prompts. Per-shelf keys (Esc to close, Space for Quick Look) are handled
+/// locally by the panel while it is key — never as system-wide hotkeys, which
+/// would swallow those keys across every app.
 @MainActor
 public final class HotkeyManager {
     public enum HotkeyKind: UInt32, CaseIterable {
         case showShelf = 1
-        case closeFrontmost = 2
-        case quickLook = 3
     }
 
     private static let signature: OSType = OSType(0x53484C46)
@@ -20,8 +21,6 @@ public final class HotkeyManager {
     private var eventHandlerRef: EventHandlerRef?
 
     public var onShowShelf: (() -> Void)?
-    public var onCloseFrontmost: (() -> Void)?
-    public var onQuickLook: (() -> Void)?
 
     public init() {
         installCarbonEventHandler()
@@ -36,22 +35,6 @@ public final class HotkeyManager {
         registrations.removeAll()
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
-        }
-    }
-
-    public func setEscEnabled(_ enabled: Bool) {
-        if enabled {
-            register(.closeFrontmost)
-        } else {
-            unregister(.closeFrontmost)
-        }
-    }
-
-    public func setSpaceEnabled(_ enabled: Bool) {
-        if enabled {
-            register(.quickLook)
-        } else {
-            unregister(.quickLook)
         }
     }
 
@@ -106,9 +89,7 @@ public final class HotkeyManager {
         }
         let (keyCode, modifiers): (UInt32, UInt32) = {
             switch kind {
-            case .showShelf:       return (UInt32(kVK_Space),  UInt32(cmdKey | shiftKey))
-            case .closeFrontmost:  return (UInt32(kVK_Escape), 0)
-            case .quickLook:       return (UInt32(kVK_Space),  0)
+            case .showShelf: return (UInt32(kVK_Space), UInt32(cmdKey | shiftKey))
             }
         }()
         let id = EventHotKeyID(signature: HotkeyManager.signature, id: kind.rawValue)
@@ -131,18 +112,6 @@ public final class HotkeyManager {
         log.info("Registered hotkey kind=\(kind.rawValue, privacy: .public)")
     }
 
-    private func unregister(_ kind: HotkeyKind) {
-        guard let ref = registrations.removeValue(forKey: kind) else { return }
-        let status = UnregisterEventHotKey(ref)
-        if status != noErr {
-            log.error(
-                "UnregisterEventHotKey failed kind=\(kind.rawValue, privacy: .public) status=\(status, privacy: .public)"
-            )
-            return
-        }
-        log.info("Unregistered hotkey kind=\(kind.rawValue, privacy: .public)")
-    }
-
     private func dispatch(id: UInt32) {
         guard let kind = HotkeyKind(rawValue: id) else {
             log.error("Hotkey fired with unknown id=\(id, privacy: .public)")
@@ -152,12 +121,6 @@ public final class HotkeyManager {
         case .showShelf:
             log.info("showShelf hotkey fired")
             onShowShelf?()
-        case .closeFrontmost:
-            log.info("closeFrontmost hotkey fired")
-            onCloseFrontmost?()
-        case .quickLook:
-            log.info("quickLook hotkey fired")
-            onQuickLook?()
         }
     }
 }
