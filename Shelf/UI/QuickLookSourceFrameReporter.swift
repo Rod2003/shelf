@@ -31,8 +31,6 @@ private struct QuickLookSourceFrameReporter: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: QuickLookSourceFrameReportingView, coordinator: ()) {
-        // Defer: dismantle runs inside SwiftUI teardown, so mutating the
-        // observed view model synchronously here crashes (SIGABRT).
         let onChange = nsView.onChange
         let itemIDs = nsView.itemIDs
         DispatchQueue.main.async {
