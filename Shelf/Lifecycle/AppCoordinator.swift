@@ -390,7 +390,7 @@ public final class AppCoordinator {
             return
         }
 
-        let isConfirmedMove = result.promiseAttempted && result.promiseSucceeded
+        let isConfirmedMove = isDragOutConfirmed(item: item, result: result)
 
         if isConfirmedMove {
             deleteOriginalFile(for: item)
@@ -425,9 +425,12 @@ public final class AppCoordinator {
             return
         }
 
-        let confirmedIDs = Set(result.outcomes
-            .filter { $0.promiseAttempted && $0.promiseSucceeded }
-            .map(\.itemID))
+        let confirmedIDs = Set(result.outcomes.compactMap { outcome -> ItemID? in
+            guard let item = shelf.items.first(where: { $0.id == outcome.itemID }) else { return nil }
+            return isMultiDragOutConfirmed(item: item, outcome: outcome, operation: result.operation)
+                ? outcome.itemID
+                : nil
+        })
         guard !confirmedIDs.isEmpty else {
             log.info("Multi drag-out completed without promise confirmation; preserving all shelf items")
             return
@@ -517,6 +520,29 @@ public final class AppCoordinator {
 }
 
 private extension AppCoordinator {
+    /// File and image drags use file promises; links and text use direct pasteboard data.
+    func isDragOutConfirmed(item: ShelfItem, result: DragOutResult) -> Bool {
+        switch item.kind {
+        case .webURL, .text:
+            return !result.operation.isEmpty
+        case .fileBookmark, .clipboardImage:
+            return result.promiseAttempted && result.promiseSucceeded
+        }
+    }
+
+    func isMultiDragOutConfirmed(
+        item: ShelfItem,
+        outcome: MultiDragOutResult.PerItem,
+        operation: NSDragOperation
+    ) -> Bool {
+        switch item.kind {
+        case .webURL, .text:
+            return !operation.isEmpty
+        case .fileBookmark, .clipboardImage:
+            return outcome.promiseAttempted && outcome.promiseSucceeded
+        }
+    }
+
     func duplicateKeys(for item: ShelfItem) -> Set<String> {
         switch item.kind {
         case .fileBookmark(let record):
