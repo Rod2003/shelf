@@ -455,8 +455,10 @@ public final class AppCoordinator {
         case .fileBookmark(let record):
             do {
                 let resolution = try bookmarkResolver.resolve(record)
+                // Release the security scope even if removal throws; the access
+                // counter must be balanced regardless of the file's existence.
+                defer { bookmarkResolver.release(resolution.url) }
                 try FileManager.default.removeItem(at: resolution.url)
-                // Do not release a URL that no longer exists.
                 log.info("Deleted original file at \(record.originalPath, privacy: .public) after .move drag-out")
             } catch {
                 log.warning("Failed to delete original file at \(record.originalPath, privacy: .public): \(String(describing: error), privacy: .public)")

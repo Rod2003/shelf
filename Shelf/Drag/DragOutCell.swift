@@ -413,14 +413,19 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         switch item.kind {
         case .fileBookmark(let record):
             let typeIdentifier = Self.utiForFile(displayName: item.displayName)
-            // Include `.fileURL` for destinations that ignore file promises.
-            let resolvedURL: URL?
+            // Resolve once only to capture the `.fileURL` string for destinations
+            // that ignore file promises; release the scope immediately since the
+            // string alone does not require holding access. The promise write path
+            // re-resolves when it actually needs to read the file.
+            let fileURLString: String?
             do {
-                let resolution = try BookmarkResolver().resolve(record)
-                resolvedURL = resolution.url
+                let resolver = BookmarkResolver()
+                let resolution = try resolver.resolve(record)
+                defer { resolver.release(resolution.url) }
+                fileURLString = resolution.url.absoluteString
             } catch {
                 Self.log.warning("Drag-start bookmark resolve failed for \(record.originalPath, privacy: .public): \(String(describing: error), privacy: .public). Falling back to file-promise-only drag.")
-                resolvedURL = nil
+                fileURLString = nil
             }
 
             var info: [String: Any] = [
@@ -432,8 +437,8 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             if includeItemID {
                 info["itemID"] = item.id.rawValue.uuidString
             }
-            if let url = resolvedURL {
-                info["fileURLString"] = url.absoluteString
+            if let fileURLString {
+                info["fileURLString"] = fileURLString
             }
             let provider = FilePromiseProviderWithURL(fileType: typeIdentifier, delegate: self)
             provider.userInfo = info
