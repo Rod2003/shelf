@@ -4,9 +4,15 @@ import SwiftUI
 import ShelfCore
 
 public enum ShelfAnimation {
-    public static let expansionDuration: TimeInterval = 0.32
+    public static let expansionDuration: TimeInterval = PanelPositioner.expansionDuration
     public static let collapseDuration: TimeInterval = 0.48
-    public static let expansion: Animation = .timingCurve(0.32, 0.94, 0.36, 1.0, duration: 0.32)
+    public static let expansion: Animation = .timingCurve(
+        0.32,
+        0.94,
+        0.36,
+        1.0,
+        duration: PanelPositioner.expansionDuration
+    )
     public static let collapse: Animation = .timingCurve(0.22, 0.88, 0.24, 1.0, duration: 0.48)
     public static let pillFade: Animation = .easeOut(duration: 0.08)
 }

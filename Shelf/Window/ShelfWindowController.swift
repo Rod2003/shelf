@@ -24,8 +24,6 @@ public final class ShelfKeyHandlingPanel: NSPanel {
 
 @MainActor
 public final class ShelfWindowController: NSObject, NSWindowDelegate {
-    public static let defaultPanelSize = CGSize(width: 180, height: 180)
-
     public let shelfID: ShelfGroupID
     public let panel: ShelfKeyHandlingPanel
     public weak var delegate: ShelfWindowControllerDelegate?
@@ -41,7 +39,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         shelfID: ShelfGroupID,
         contentView: NSView,
         atOrigin: CGPoint,
-        panelSize: CGSize = defaultPanelSize
+        panelSize: CGSize = PanelPositioner.collapsedPanelSize
     ) {
         self.shelfID = shelfID
 
@@ -89,8 +87,6 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.close()
         log.info("Shelf panel close requested id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
     }
-
-    public static let expansionDuration: TimeInterval = 0.32
 
     private static func applyRoundedClearMask(to layer: CALayer?) {
         guard let layer else { return }

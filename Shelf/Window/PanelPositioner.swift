@@ -6,7 +6,10 @@ import Foundation
 public enum PanelPositioner {
     public static let edgeMargin: CGFloat = 8
 
-    public static let defaultPanelSize = CGSize(width: 180, height: 180)
+    public static let collapsedPanelSize = CGSize(width: 180, height: 180)
+    public static let expandedPanelSize = CGSize(width: 280, height: 280)
+    public static let expansionDuration: TimeInterval = 0.32
+    public static let defaultPanelSize = collapsedPanelSize
 
     public static let cascadeOffsetPx: CGFloat = 30
 
