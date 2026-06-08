@@ -19,7 +19,7 @@ public final class ShelfStore: @unchecked Sendable {
     }
 
     public func set(_ shelf: ShelfGroup) {
-        let callback = withLock {
+        let callback: (() -> Void)? = withLock {
             guard persist(.store(shelf)) else { return nil }
             self.shelf = shelf
             return changeHandler
@@ -28,7 +28,7 @@ public final class ShelfStore: @unchecked Sendable {
     }
 
     public func remove() {
-        let callback = withLock {
+        let callback: (() -> Void)? = withLock {
             guard shelf != nil else {
                 return nil
             }
@@ -46,7 +46,7 @@ public final class ShelfStore: @unchecked Sendable {
     }
 
     public func update(mutate: (inout ShelfGroup) -> Void) {
-        let callback = withLock {
+        let callback: (() -> Void)? = withLock {
             guard let original = shelf else {
                 return nil
             }
