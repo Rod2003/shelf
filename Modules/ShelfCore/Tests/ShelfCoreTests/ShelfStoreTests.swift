@@ -288,4 +288,80 @@ final class ShelfStoreTests: XCTestCase {
         store.update { $0.name = "missing" }
         XCTAssertEqual(fireCount, 3, "empty-store mutations must not fire the observer")
     }
+
+    func testReentrantOnChangeCanSafelyMutateStore() {
+        let store = ShelfStore(backend: .inMemory)
+        var fireCount = 0
+        store.onChange = {
+            fireCount += 1
+            if fireCount == 1 {
+                store.update { $0.name = "reentered" }
+            }
+        }
+
+        store.set(makeShelf(name: "initial"))
+
+        XCTAssertEqual(fireCount, 2, "reentrant observer should receive the nested update")
+        XCTAssertEqual(store.current()?.name, "reentered")
+    }
+
+    func testFailedWriteDoesNotUpdateCurrentShelf() {
+        let defaults = InterceptingUserDefaults()
+        defaults.dropWrites = true
+        let prefix = "test"
+        let store = ShelfStore(backend: .userDefaults(defaults, keyPrefix: prefix))
+        let shelf = makeShelf(name: "unsaved")
+
+        store.set(shelf)
+
+        XCTAssertNil(store.current(), "in-memory state must not advance when persistence fails")
+        XCTAssertNil(defaults.data(forKey: "\(prefix).shelf"))
+    }
+
+    func testFailedDeleteKeepsCurrentShelf() throws {
+        let defaults = InterceptingUserDefaults()
+        let prefix = "test"
+        let shelf = makeShelf(name: "persisted")
+        defaults.seed(data: try JSONEncoder().encode(shelf), forKey: "\(prefix).shelf")
+        let store = ShelfStore(backend: .userDefaults(defaults, keyPrefix: prefix))
+        defaults.ignoreRemovals = true
+
+        store.remove()
+
+        XCTAssertEqual(store.current(), shelf, "failed deletes must leave the current shelf intact")
+        XCTAssertNotNil(defaults.data(forKey: "\(prefix).shelf"))
+    }
+}
+
+private final class InterceptingUserDefaults: UserDefaults {
+    var dropWrites = false
+    var ignoreRemovals = false
+
+    private var storage: [String: Any] = [:]
+
+    init() {
+        super.init(suiteName: "test.shelfstore.intercept.\(UUID().uuidString)")!
+    }
+
+    func seed(data: Data, forKey key: String) {
+        storage[key] = data
+    }
+
+    override func set(_ value: Any?, forKey defaultName: String) {
+        guard !dropWrites else { return }
+        storage[defaultName] = value
+    }
+
+    override func removeObject(forKey defaultName: String) {
+        guard !ignoreRemovals else { return }
+        storage.removeValue(forKey: defaultName)
+    }
+
+    override func object(forKey defaultName: String) -> Any? {
+        storage[defaultName]
+    }
+
+    override func data(forKey defaultName: String) -> Data? {
+        storage[defaultName] as? Data
+    }
 }

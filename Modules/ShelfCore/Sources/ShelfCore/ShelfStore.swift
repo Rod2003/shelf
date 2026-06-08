@@ -1,89 +1,114 @@
 import Foundation
 
 public final class ShelfStore: @unchecked Sendable {
-    // Keep shelf access under `lock`; `onChange` fires after unlock.
-
-    public var onChange: (() -> Void)?
+    // Keep store state under `lock`; callbacks fire after unlock so observers
+    // can safely reenter the store without deadlocking.
+    public var onChange: (() -> Void)? {
+        get { withLock { changeHandler } }
+        set { withLock { changeHandler = newValue } }
+    }
 
     private let backend: ShelfStoreBackend
     private let lock = NSLock()
     private var shelf: ShelfGroup?
+    private var changeHandler: (() -> Void)?
 
     public init(backend: ShelfStoreBackend) {
         self.backend = backend
-        loadFromBackend()
+        self.shelf = Self.loadFromBackend(backend)
     }
 
     public func set(_ shelf: ShelfGroup) {
-        lock.lock()
-        self.shelf = shelf
-        persistShelf(shelf)
-        lock.unlock()
-        onChange?()
+        let callback = withLock {
+            guard persist(.store(shelf)) else { return nil }
+            self.shelf = shelf
+            return changeHandler
+        }
+        callback?()
     }
 
     public func remove() {
-        lock.lock()
-        guard shelf != nil else {
-            lock.unlock()
-            return
+        let callback = withLock {
+            guard shelf != nil else {
+                return nil
+            }
+            guard persist(.remove) else {
+                return nil
+            }
+            shelf = nil
+            return changeHandler
         }
-        shelf = nil
-        deleteShelf()
-        lock.unlock()
-        onChange?()
+        callback?()
     }
 
     public func current() -> ShelfGroup? {
-        lock.lock()
-        defer { lock.unlock() }
-        return shelf
+        withLock { shelf }
     }
 
     public func update(mutate: (inout ShelfGroup) -> Void) {
-        lock.lock()
-        guard let original = shelf else {
-            lock.unlock()
-            return
+        let callback = withLock {
+            guard let original = shelf else {
+                return nil
+            }
+            var updated = original
+            mutate(&updated)
+            guard updated != original else {
+                return nil
+            }
+            guard persist(.store(updated)) else {
+                return nil
+            }
+            shelf = updated
+            return changeHandler
         }
-        var updated = original
-        mutate(&updated)
-        guard updated != original else {
-            lock.unlock()
-            return
-        }
-        shelf = updated
-        persistShelf(updated)
-        lock.unlock()
-        onChange?()
+        callback?()
     }
 
-    private func loadFromBackend() {
+    private func persist(_ operation: PersistenceOperation) -> Bool {
+        do {
+            switch backend {
+            case .inMemory:
+                return true
+            case let .userDefaults(defaults, prefix):
+                switch operation {
+                case .store(let shelf):
+                    try Self.persistShelf(shelf, defaults: defaults, prefix: prefix)
+                case .remove:
+                    try Self.deleteShelf(defaults: defaults, prefix: prefix)
+                }
+                return true
+            }
+        } catch {
+            assertionFailure("ShelfStore persistence failed: \(error)")
+            return false
+        }
+    }
+
+    private static func loadFromBackend(_ backend: ShelfStoreBackend) -> ShelfGroup? {
         switch backend {
         case .inMemory:
-            return
+            return nil
         case let .userDefaults(defaults, prefix):
             if let data = defaults.data(forKey: shelfKey(prefix: prefix)),
                let decoded = try? JSONDecoder().decode(ShelfGroup.self, from: data) {
-                self.shelf = decoded
-                return
+                return decoded
             }
-
-            migrateLegacyIndexedShelf(defaults: defaults, prefix: prefix)
+            return migrateLegacyIndexedShelf(defaults: defaults, prefix: prefix)
         }
     }
 
-    private func migrateLegacyIndexedShelf(defaults: UserDefaults, prefix: String) {
-        guard let data = defaults.data(forKey: legacyIndexKey(prefix: prefix)) else {
-            return
+    private static func migrateLegacyIndexedShelf(defaults: UserDefaults, prefix: String) -> ShelfGroup? {
+        let indexKey = legacyIndexKey(prefix: prefix)
+        guard let data = defaults.data(forKey: indexKey) else {
+            return nil
         }
-        defer { defaults.removeObject(forKey: legacyIndexKey(prefix: prefix)) }
 
-        guard let ids = try? JSONDecoder().decode([ShelfGroupID].self, from: data) else { return }
+        guard let ids = try? JSONDecoder().decode([ShelfGroupID].self, from: data) else { return nil }
         var migratedShelf: ShelfGroup?
+        var legacyKeysToRemove = [indexKey]
         for id in ids {
             let key = legacyShelfKey(prefix: prefix, id: id)
-            defer { defaults.removeObject(forKey: key) }
+            legacyKeysToRemove.append(key)
             guard migratedShelf == nil else { continue }
             guard let shelfData = defaults.data(forKey: key) else { continue }
             guard let shelf = try? JSONDecoder().decode(ShelfGroup.self, from: shelfData) else { continue }
@@ -91,31 +116,68 @@ public final class ShelfStore: @unchecked Sendable {
         }
 
         if let migratedShelf {
-            self.shelf = migratedShelf
-            persistShelf(migratedShelf)
+            if (try? persistShelf(migratedShelf, defaults: defaults, prefix: prefix)) != nil {
+                for key in legacyKeysToRemove {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+            return migratedShelf
+        }
+
+        for key in legacyKeysToRemove {
+            defaults.removeObject(forKey: key)
+        }
+        return nil
+    }
+
+    private static func persistShelf(
+        _ shelf: ShelfGroup,
+        defaults: UserDefaults,
+        prefix: String
+    ) throws {
+        let data = try JSONEncoder().encode(shelf)
+        let key = shelfKey(prefix: prefix)
+        defaults.set(data, forKey: key)
+        guard defaults.data(forKey: key) == data else {
+            throw PersistenceError.writeVerificationFailed(key: key)
         }
     }
 
-    private func persistShelf(_ shelf: ShelfGroup) {
-        guard case let .userDefaults(defaults, prefix) = backend else { return }
-        guard let data = try? JSONEncoder().encode(shelf) else { return }
-        defaults.set(data, forKey: shelfKey(prefix: prefix))
+    private static func deleteShelf(defaults: UserDefaults, prefix: String) throws {
+        let key = shelfKey(prefix: prefix)
+        defaults.removeObject(forKey: key)
+        guard defaults.data(forKey: key) == nil else {
+            throw PersistenceError.deleteVerificationFailed(key: key)
+        }
     }
 
-    private func deleteShelf() {
-        guard case let .userDefaults(defaults, prefix) = backend else { return }
-        defaults.removeObject(forKey: shelfKey(prefix: prefix))
-    }
-
-    private func shelfKey(prefix: String) -> String {
+    private static func shelfKey(prefix: String) -> String {
         "\(prefix).shelf"
     }
 
-    private func legacyIndexKey(prefix: String) -> String {
+    private static func legacyIndexKey(prefix: String) -> String {
         "\(prefix).index"
     }
 
-    private func legacyShelfKey(prefix: String, id: ShelfGroupID) -> String {
+    private static func legacyShelfKey(prefix: String, id: ShelfGroupID) -> String {
         "\(prefix).shelf.\(id.rawValue.uuidString)"
+    }
+
+    private func withLock<Result>(_ body: () -> Result) -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
+    }
+}
+
+private extension ShelfStore {
+    enum PersistenceOperation {
+        case store(ShelfGroup)
+        case remove
+    }
+
+    enum PersistenceError: Error, Equatable {
+        case writeVerificationFailed(key: String)
+        case deleteVerificationFailed(key: String)
     }
 }
