@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import CryptoKit
 import OSLog
 import ShelfCore
@@ -22,9 +21,6 @@ public final class AppCoordinator {
     private let thumbnailService: ThumbnailService
     private let quickLook: QuickLookCoordinator
 
-    private let promiseDelegate: FilePromiseDelegate
-    private let dragOutSource: DragOutSource
-
     private var viewModel: ShelfViewModel?
     private var collapsedSize: CGSize?
 
@@ -32,8 +28,6 @@ public final class AppCoordinator {
         self.defaultsBackend = DefaultsBackend()
         self.bookmarkResolver = BookmarkResolver()
         self.thumbnailService = ThumbnailService()
-        self.promiseDelegate = FilePromiseDelegate(resolver: bookmarkResolver)
-        self.dragOutSource = DragOutSource(promiseDelegate: promiseDelegate)
         self.shelfStore = defaultsBackend.makeShelfStore()
         self.hotkeyManager = HotkeyManager()
         self.shakeDetector = ShakeDetector(config: .defaultMedium)
