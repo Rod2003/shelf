@@ -4,8 +4,6 @@ import ShelfCore
 
 @MainActor
 public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
-    public static let cascadeOffsetPx: CGFloat = 30
-
     private var controller: ShelfWindowController?
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 

@@ -18,7 +18,7 @@ public final class ShakeDetector {
     public static let activePollSec: TimeInterval = 1.0 / 60.0
     public static let dragEndStagnationSec: TimeInterval = 0.6
 
-    // Keep in sync with `DragInView.acceptedTypes` without importing Drag into Detect.
+    // Keep in sync with `DragItemFactory.acceptedPasteboardTypes` without importing Drag into Detect.
     private static let droppableTypes: Set<NSPasteboard.PasteboardType> = [
         .fileURL,
         .URL,
