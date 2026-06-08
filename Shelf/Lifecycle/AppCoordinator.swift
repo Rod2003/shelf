@@ -6,7 +6,6 @@ import SwiftUI
 
 @MainActor
 public final class AppCoordinator {
-    private static let expandedPanelSize = CGSize(width: 280, height: 280)
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
 
     private let defaultsBackend: DefaultsBackend
@@ -269,10 +268,10 @@ public final class AppCoordinator {
             let targetSize: CGSize
             if expanded {
                 self.collapsedSize = controller.panel.frame.size
-                targetSize = Self.expandedPanelSize
+                targetSize = PanelPositioner.expandedPanelSize
             } else {
                 targetSize = self.collapsedSize
-                    ?? ShelfWindowController.defaultPanelSize
+                    ?? PanelPositioner.collapsedPanelSize
                 self.collapsedSize = nil
             }
             controller.setFrameSize(

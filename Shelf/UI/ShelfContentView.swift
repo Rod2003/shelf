@@ -2,9 +2,6 @@ import SwiftUI
 import ShelfCore
 
 public struct ShelfContentView: View {
-    private static let collapsedPanelSize = CGSize(width: 180, height: 180)
-    private static let expandedPanelSize = CGSize(width: 280, height: 280)
-
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
@@ -57,8 +54,8 @@ public struct ShelfContentView: View {
                 .zIndex(2)
         }
         .frame(
-            minWidth: viewModel.isExpanded ? Self.expandedPanelSize.width : Self.collapsedPanelSize.width,
-            minHeight: viewModel.isExpanded ? Self.expandedPanelSize.height : Self.collapsedPanelSize.height
+            minWidth: viewModel.isExpanded ? PanelPositioner.expandedPanelSize.width : PanelPositioner.collapsedPanelSize.width,
+            minHeight: viewModel.isExpanded ? PanelPositioner.expandedPanelSize.height : PanelPositioner.collapsedPanelSize.height
         )
         .contentShape(Rectangle())
         .clipShape(RoundedRectangle(cornerRadius: ShelfGlass.panelCornerRadius, style: .continuous))
