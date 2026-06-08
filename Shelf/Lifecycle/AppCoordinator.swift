@@ -342,27 +342,13 @@ public final class AppCoordinator {
             }
 
         case .clipboardImage(let filename):
-            if let url = clipboardImageURL(filename: filename) {
+            if let url = DefaultsBackend.clipboardImageURL(filename: filename) {
                 previews.append(QuickLookCoordinator.Preview(itemID: item.id, url: url))
             }
 
         case .webURL, .text:
             break
         }
-    }
-
-    private func clipboardImageURL(filename: String) -> URL? {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            return nil
-        }
-        let url = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
-            .appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func handleDragOutEnded(_ result: DragOutResult) {
@@ -458,14 +444,7 @@ public final class AppCoordinator {
                 log.warning("Failed to delete original file at \(record.originalPath, privacy: .public): \(String(describing: error), privacy: .public)")
             }
         case .clipboardImage(let filename):
-            guard let appSupport = FileManager.default.urls(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first else { return }
-            let url = appSupport
-                .appendingPathComponent("Shelf", isDirectory: true)
-                .appendingPathComponent("clipboard-images", isDirectory: true)
-                .appendingPathComponent(filename)
+            guard let url = DefaultsBackend.clipboardImageURL(filename: filename) else { return }
             try? FileManager.default.removeItem(at: url)
         case .webURL, .text:
             break
@@ -541,7 +520,7 @@ private extension AppCoordinator {
         case .fileBookmark(let record):
             return fileBookmarkDuplicateKeys(record)
         case .clipboardImage(let filename):
-            guard let url = clipboardImageURL(filename: filename) else { return [] }
+            guard let url = DefaultsBackend.clipboardImageURL(filename: filename) else { return [] }
             return fileDuplicateKeys(for: url)
         case .webURL, .text:
             return []

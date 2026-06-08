@@ -361,7 +361,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             }
 
         case .clipboardImage(let filename):
-            guard let url = clipboardImageURL(filename: filename) else { return nil }
+            guard let url = DefaultsBackend.clipboardImageURL(filename: filename) else { return nil }
             return sourceImage(from: url)
 
         case .webURL, .text:
@@ -370,15 +370,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
     }
 
     private func sourceImage(from url: URL) -> NSImage? {
-        guard
-            let data = try? Data(contentsOf: url),
-            let image = NSImage(data: data),
-            image.size.width > 0,
-            image.size.height > 0
-        else {
-            return nil
-        }
-        return image
+        ThumbnailService.sourceImageIfAvailable(for: url)
     }
 
     private func aspectFitFrame(for sourceSize: CGSize, in rect: CGRect) -> CGRect? {
@@ -393,20 +385,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             width: size.width,
             height: size.height
         )
-    }
-
-    private func clipboardImageURL(filename: String) -> URL? {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            return nil
-        }
-        let url = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
-            .appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func makePasteboardWriter(for item: ShelfItem, includeItemID: Bool = false) -> NSPasteboardWriting {
@@ -445,17 +423,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             return provider
 
         case .clipboardImage(let filename):
-            let resolvedURL: URL? = {
-                guard let appSupport = FileManager.default.urls(
-                    for: .applicationSupportDirectory,
-                    in: .userDomainMask
-                ).first else { return nil }
-                let url = appSupport
-                    .appendingPathComponent("Shelf", isDirectory: true)
-                    .appendingPathComponent("clipboard-images", isDirectory: true)
-                    .appendingPathComponent(filename)
-                return FileManager.default.fileExists(atPath: url.path) ? url : nil
-            }()
+            let resolvedURL = DefaultsBackend.clipboardImageURL(filename: filename)
 
             var info: [String: Any] = [
                 "kind": "clipboardImage",
