@@ -53,7 +53,8 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         let shelf = makeShelf(itemCount: 3)
         let vm = ShelfViewModel(shelf: shelf)
         vm.isExpanded = true
-        vm.drawerSelection = [shelf.items[0].id, shelf.items[2].id]
+        vm.selectOnly(shelf.items[0].id)
+        vm.toggle(shelf.items[2].id)
 
         let targets = vm.quickLookTargetItems
         XCTAssertEqual(Set(targets.map(\.id)), Set([shelf.items[0].id, shelf.items[2].id]))
@@ -63,7 +64,6 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         let shelf = makeShelf(itemCount: 3)
         let vm = ShelfViewModel(shelf: shelf)
         vm.isExpanded = true
-        vm.drawerSelection = []
 
         XCTAssertTrue(vm.quickLookTargetItems.isEmpty)
     }
@@ -72,7 +72,8 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         let shelf = makeShelf(itemCount: 4)
         let vm = ShelfViewModel(shelf: shelf)
         vm.isExpanded = true
-        vm.drawerSelection = [shelf.items[3].id, shelf.items[1].id]
+        vm.selectOnly(shelf.items[3].id)
+        vm.toggle(shelf.items[1].id)
 
         let targets = vm.quickLookTargetItems
         XCTAssertEqual(targets.map(\.id), [shelf.items[1].id, shelf.items[3].id])
