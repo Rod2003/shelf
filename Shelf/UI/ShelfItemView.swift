@@ -110,53 +110,26 @@ public struct ShelfItemView: View {
         }
     }
     private func loadThumbnailIfNeeded() async {
+        guard let service = thumbnailService else { return }
         switch item.kind {
-        case .fileBookmark(let record):
-            guard let resolver, let service = thumbnailService else { return }
-            do {
-                let resolution = try resolver.resolve(record)
-                let image = await service.thumbnail(for: resolution.url)
-                resolver.release(resolution.url)
-                thumbnail = image
-            } catch {
+        case .fileBookmark:
+            thumbnail = await service.thumbnail(
+                for: item,
+                resolver: resolver,
+                size: CGSize(width: 64, height: 64)
+            )
+            if thumbnail == nil {
                 isMissing = true
             }
 
-        case .clipboardImage(let filename):
-            guard let url = clipboardImageURL(filename: filename),
-                  let image = sourceImageIfAvailable(for: url) else {
-                return
-            }
-            thumbnail = image
-
+        case .clipboardImage:
+            thumbnail = await service.thumbnail(
+                for: item,
+                resolver: resolver,
+                size: CGSize(width: 64, height: 64)
+            )
         case .webURL, .text:
             return
         }
-    }
-
-    private func sourceImageIfAvailable(for url: URL) -> NSImage? {
-        guard
-            let data = try? Data(contentsOf: url),
-            let image = NSImage(data: data),
-            image.size.width > 0,
-            image.size.height > 0
-        else {
-            return nil
-        }
-        return image
-    }
-
-    private func clipboardImageURL(filename: String) -> URL? {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            return nil
-        }
-        let url = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
-            .appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 }

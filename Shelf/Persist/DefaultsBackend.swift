@@ -23,20 +23,39 @@ public final class DefaultsBackend {
         ShelfStore(backend: .userDefaults(defaults, keyPrefix: keyPrefix))
     }
 
-    @discardableResult
-    public func ensureApplicationSupport() -> URL? {
-        let fm = FileManager.default
-        guard let appSupport = fm.urls(
+    public static func clipboardImagesDirectoryURL(
+        fileManager: FileManager = .default
+    ) -> URL? {
+        guard let appSupport = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first else {
+            return nil
+        }
+        return appSupport.appendingPathComponent(
+            clipboardImagesSubpath,
+            isDirectory: true
+        )
+    }
+
+    public static func clipboardImageURL(
+        filename: String,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        guard let directory = clipboardImagesDirectoryURL(fileManager: fileManager) else {
+            return nil
+        }
+        let url = directory.appendingPathComponent(filename)
+        return fileManager.fileExists(atPath: url.path) ? url : nil
+    }
+
+    @discardableResult
+    public func ensureApplicationSupport() -> URL? {
+        let fm = FileManager.default
+        guard let target = Self.clipboardImagesDirectoryURL(fileManager: fm) else {
             log.error("Application Support URL unavailable")
             return nil
         }
-        let target = appSupport.appendingPathComponent(
-            Self.clipboardImagesSubpath,
-            isDirectory: true
-        )
         do {
             try fm.createDirectory(
                 at: target,

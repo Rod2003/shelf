@@ -176,6 +176,7 @@ public struct ShelfContentView: View {
                 StackedShelfView(
                     viewModel: viewModel,
                     resolver: resolver,
+                    thumbnailService: thumbnailService,
                     namespace: morphNamespace,
                     glassNamespace: glassNamespace,
                     onSingleDragEnded: onSingleDragEnded,
@@ -252,6 +253,7 @@ private struct StackedShelfView: View {
 
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
     let namespace: Namespace.ID
     let glassNamespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
@@ -288,6 +290,7 @@ private struct StackedShelfView: View {
                         StackCardsView(
                             items: viewModel.items,
                             resolver: resolver,
+                            thumbnailService: thumbnailService,
                             namespace: namespace,
                             glassNamespace: glassNamespace
                         )
@@ -344,6 +347,7 @@ private struct StackCardsView: View {
 
     let items: [ShelfItem]
     let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
     let namespace: Namespace.ID
     let glassNamespace: Namespace.ID
 
@@ -360,6 +364,7 @@ private struct StackCardsView: View {
                 StackThumbnailCard(
                     item: layer.item,
                     resolver: resolver,
+                    thumbnailService: thumbnailService,
                     rotation: layer.rotation,
                     offset: layer.offset
                 )
@@ -384,6 +389,7 @@ private struct StackLayer: Identifiable {
 private struct StackThumbnailCard: View {
     let item: ShelfItem
     let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
     let rotation: Double
     let offset: CGSize
     @State private var thumbnail: NSImage?
@@ -427,49 +433,17 @@ private struct StackThumbnailCard: View {
     }
 
     private func loadThumbnailIfNeeded() async {
-        do {
-            switch item.kind {
-            case .fileBookmark(let record):
-                guard let resolver else { return }
-                let resolution = try resolver.resolve(record)
-                defer { resolver.release(resolution.url) }
-                thumbnail = sourceImageIfAvailable(for: resolution.url)
-                return
-            case .clipboardImage(let filename):
-                guard let resolvedURL = clipboardImageURL(filename: filename) else { return }
-                thumbnail = sourceImageIfAvailable(for: resolvedURL)
-            case .webURL, .text:
-                return
-            }
-        } catch {
-            thumbnail = nil
+        guard let thumbnailService else { return }
+        switch item.kind {
+        case .fileBookmark, .clipboardImage:
+            thumbnail = await thumbnailService.thumbnail(
+                for: item,
+                resolver: resolver,
+                size: maxImageSize
+            )
+        case .webURL, .text:
+            return
         }
-    }
-
-    private func sourceImageIfAvailable(for url: URL) -> NSImage? {
-        guard
-            let data = try? Data(contentsOf: url),
-            let image = NSImage(data: data),
-            image.size.width > 0,
-            image.size.height > 0
-        else {
-            return nil
-        }
-        return image
-    }
-
-    private func clipboardImageURL(filename: String) -> URL? {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            return nil
-        }
-        let url = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
-            .appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 }
 
