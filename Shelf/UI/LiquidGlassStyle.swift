@@ -52,15 +52,10 @@ struct ShelfPanelBorder: View {
 }
 
 struct ShelfGlassCircleBackground: ViewModifier {
-    let id: String
-    let namespace: Namespace.ID
-
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular.interactive(), in: .circle)
-                .glassEffectID(id, in: namespace)
-                .glassEffectTransition(.matchedGeometry)
         } else {
             content
                 .background(.regularMaterial, in: Circle())

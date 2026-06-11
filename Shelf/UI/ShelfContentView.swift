@@ -16,7 +16,6 @@ public struct ShelfContentView: View {
     @State private var isCollapseHovering: Bool = false
     @State private var keepsCollapseButtonMounted: Bool = false
     @Namespace private var morphNamespace
-    @Namespace private var glassNamespace
 
     public init(
         viewModel: ShelfViewModel,
@@ -189,7 +188,7 @@ public struct ShelfContentView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(isCloseHovering ? .primary : .secondary)
                 .frame(width: 30, height: 30)
-                .modifier(ShelfGlassCircleBackground(id: "close", namespace: glassNamespace))
+                .modifier(ShelfGlassCircleBackground())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -205,7 +204,7 @@ public struct ShelfContentView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(isCollapseHovering ? .primary : .secondary)
                 .frame(width: 30, height: 30)
-                .modifier(ShelfGlassCircleBackground(id: "collapse", namespace: glassNamespace))
+                .modifier(ShelfGlassCircleBackground())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
