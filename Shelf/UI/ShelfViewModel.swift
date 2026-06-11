@@ -38,6 +38,7 @@ public final class ShelfViewModel: ObservableObject {
     @Published public var isDropTargeted: Bool
     @Published public private(set) var quickLookSourceFrames: [ItemID: CGRect]
     @Published private var selectionState = ShelfSelectionState()
+    private var isExpansionTransitionInFlight = false
 
     public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
@@ -66,41 +67,56 @@ public final class ShelfViewModel: ObservableObject {
 
     public func setExpanded(_ expanded: Bool) {
         guard isExpanded != expanded else { return }
-        guard let animateWindow else {
-            if expanded {
-                hidesDrawerLabels = false
-                withAnimation(ShelfAnimation.pillFade) {
-                    showsCollapsedPill = false
-                } completion: {
-                    withAnimation(ShelfAnimation.expansion) { self.isExpanded = true }
-                }
-            } else {
-                hidesDrawerLabels = true
-                withAnimation(ShelfAnimation.collapse) {
-                    showsCollapsedPill = true
-                    isExpanded = false
-                } completion: {
-                    self.hidesDrawerLabels = false
-                }
-            }
-            return
-        }
+        guard !isExpansionTransitionInFlight else { return }
+        isExpansionTransitionInFlight = true
+
         if expanded {
             hidesDrawerLabels = false
-            withAnimation(ShelfAnimation.expansion) {
+            withAnimation(ShelfAnimation.pillFade) {
                 showsCollapsedPill = false
-                isExpanded = true
+            } completion: { [weak self] in
+                self?.runWindowAnimation(expanded: true, duration: ShelfAnimation.expansionDuration) { [weak self] in
+                    self?.finishExpanding()
+                }
             }
-            animateWindow(true, ShelfAnimation.expansionDuration) {}
         } else {
             hidesDrawerLabels = true
             withAnimation(ShelfAnimation.collapse) {
-                showsCollapsedPill = true
                 isExpanded = false
+            } completion: { [weak self] in
+                self?.runWindowAnimation(expanded: false, duration: ShelfAnimation.collapseDuration) { [weak self] in
+                    self?.finishCollapsing()
+                }
             }
-            animateWindow(false, ShelfAnimation.collapseDuration) { [weak self] in
-                self?.hidesDrawerLabels = false
-            }
+        }
+    }
+
+    private func runWindowAnimation(
+        expanded: Bool,
+        duration: TimeInterval,
+        completion: @escaping () -> Void
+    ) {
+        guard let animateWindow else {
+            completion()
+            return
+        }
+        animateWindow(expanded, duration, completion)
+    }
+
+    private func finishExpanding() {
+        withAnimation(ShelfAnimation.expansion) {
+            isExpanded = true
+        } completion: {
+            self.isExpansionTransitionInFlight = false
+        }
+    }
+
+    private func finishCollapsing() {
+        withAnimation(ShelfAnimation.pillFade) {
+            showsCollapsedPill = true
+        } completion: {
+            self.hidesDrawerLabels = false
+            self.isExpansionTransitionInFlight = false
         }
     }
 

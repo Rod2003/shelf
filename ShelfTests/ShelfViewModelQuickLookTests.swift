@@ -92,4 +92,55 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
 
         XCTAssertNil(vm.quickLookSourceFrames[shelf.items[0].id])
     }
+
+    func testExpandWithWindowAnimationSerializesPillAndDrawerState() async {
+        let shelf = makeShelf(itemCount: 3)
+        let vm = ShelfViewModel(shelf: shelf)
+        let animateWindowCalled = expectation(description: "animateWindow called")
+
+        vm.animateWindow = { expanded, duration, completion in
+            XCTAssertTrue(expanded)
+            XCTAssertEqual(duration, ShelfAnimation.expansionDuration, accuracy: 0.001)
+            XCTAssertFalse(vm.showsCollapsedPill)
+            XCTAssertFalse(vm.isExpanded)
+            animateWindowCalled.fulfill()
+            completion()
+        }
+
+        vm.setExpanded(true)
+
+        await fulfillment(of: [animateWindowCalled], timeout: 1.0)
+        try? await Task.sleep(nanoseconds: 400_000_000)
+
+        XCTAssertTrue(vm.isExpanded)
+        XCTAssertFalse(vm.showsCollapsedPill)
+        XCTAssertFalse(vm.hidesDrawerLabels)
+    }
+
+    func testRepeatedExpandRequestsDoNotStartASecondWindowAnimation() async {
+        let shelf = makeShelf(itemCount: 3)
+        let vm = ShelfViewModel(shelf: shelf)
+        let animateWindowCalled = expectation(description: "animateWindow called once")
+        var animateWindowCalls = 0
+        var completion: (() -> Void)?
+
+        vm.animateWindow = { expanded, _, finished in
+            XCTAssertTrue(expanded)
+            animateWindowCalls += 1
+            completion = finished
+            animateWindowCalled.fulfill()
+        }
+
+        vm.setExpanded(true)
+        vm.setExpanded(true)
+
+        await fulfillment(of: [animateWindowCalled], timeout: 1.0)
+        XCTAssertEqual(animateWindowCalls, 1)
+
+        completion?()
+        try? await Task.sleep(nanoseconds: 400_000_000)
+
+        XCTAssertTrue(vm.isExpanded)
+        XCTAssertEqual(animateWindowCalls, 1)
+    }
 }
