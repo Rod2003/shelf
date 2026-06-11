@@ -175,7 +175,6 @@ public struct ShelfContentView: View {
                     resolver: resolver,
                     thumbnailService: thumbnailService,
                     namespace: morphNamespace,
-                    glassNamespace: glassNamespace,
                     onSingleDragEnded: onSingleDragEnded,
                     onMultiDragEnded: onMultiDragEnded
                 )
@@ -252,7 +251,6 @@ private struct StackedShelfView: View {
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
     let namespace: Namespace.ID
-    let glassNamespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
 
@@ -288,8 +286,7 @@ private struct StackedShelfView: View {
                             items: viewModel.items,
                             resolver: resolver,
                             thumbnailService: thumbnailService,
-                            namespace: namespace,
-                            glassNamespace: glassNamespace
+                            namespace: namespace
                         )
                     }
                     .frame(
@@ -317,7 +314,6 @@ private struct StackedShelfView: View {
                         ShelfPill(
                             label: pillLabel,
                             fitsToContent: viewModel.items.count > 1,
-                            glassNamespace: glassNamespace,
                             onToggle: {
                                 viewModel.setExpanded(true)
                             }
@@ -346,7 +342,6 @@ private struct StackCardsView: View {
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
     let namespace: Namespace.ID
-    let glassNamespace: Namespace.ID
 
     private var visibleLayers: [StackLayer] {
         let layers = zip(items.prefix(3), Self.layerStyles).map { item, style in
@@ -447,7 +442,6 @@ private struct StackThumbnailCard: View {
 private struct ShelfPill: View {
     let label: String
     let fitsToContent: Bool
-    let glassNamespace: Namespace.ID
     let onToggle: () -> Void
     @State private var isHovering: Bool = false
 
@@ -462,7 +456,7 @@ private struct ShelfPill: View {
             .padding(.horizontal, fitsToContent ? 14 : 10)
             .padding(.vertical, 6)
             .foregroundStyle(isHovering ? .primary : .secondary)
-            .modifier(ShelfGlassPillBackground(id: "attachments-pill", namespace: glassNamespace))
+            .modifier(ShelfGlassPillBackground())
             .contentShape(Capsule())
         }
         .frame(maxWidth: fitsToContent ? nil : .infinity)
