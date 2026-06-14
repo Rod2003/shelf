@@ -22,7 +22,6 @@
 		6093F6DBFC90938CC41C91B1 /* ShelfApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */; };
 		6DB3EFDE157406CD9DE407BC /* PanelPositioner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5804D49D01AAADB58714ED8 /* PanelPositioner.swift */; };
 		730CFB1D2ABC2638E99D0144 /* ShelfCore in Frameworks */ = {isa = PBXBuildFile; productRef = D3B3D7FE690B7CCB4CC75D90 /* ShelfCore */; };
-		AA1B2C3D4E5F60718293A4B5 /* QuickLookSourceFrameReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1B2C3D4E5F60718293A4B5 /* QuickLookSourceFrameReporter.swift */; };
 		8BB39BB6967C4533412FDB10 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */; };
 		8F6D6B537157D62A0904EF60 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52830C11D37CBBA9C1A8847E /* main.swift */; };
 		922C86691654550D232B8E9F /* DragInDragOutIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */; };
@@ -37,6 +36,7 @@
 		DF0A2890354CA4DB6D695686 /* LiquidGlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */; };
 		DFC1336B119555D27CDCCB0A /* PersistenceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9285D0BEF5CDDAF194E923E6 /* PersistenceIntegrationTests.swift */; };
 		E4D56C89F0BDE14D824A9178 /* DisplayChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007C9A73EDBE5752206EF94 /* DisplayChangeTests.swift */; };
+		EF0D63B57E674A40C3FDD7B5 /* QuickLookSourceFrameReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290211F46392A47877B4F9E3 /* QuickLookSourceFrameReporter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +57,7 @@
 		21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragInDragOutIntegrationTests.swift; sourceTree = "<group>"; };
 		2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManagerIntegrationTests.swift; sourceTree = "<group>"; };
 		27DD4C528E61B83644644570 /* ShelfCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ShelfCore; path = Modules/ShelfCore; sourceTree = SOURCE_ROOT; };
+		290211F46392A47877B4F9E3 /* QuickLookSourceFrameReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookSourceFrameReporter.swift; sourceTree = "<group>"; };
 		39E1FF9FBB78510063F526A6 /* DragItemFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragItemFactory.swift; sourceTree = "<group>"; };
 		4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPositionerTests.swift; sourceTree = "<group>"; };
 		52830C11D37CBBA9C1A8847E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -71,7 +72,6 @@
 		A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassStyle.swift; sourceTree = "<group>"; };
 		A7BA7449A7ED3543AAD7A801 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AEE65A95AA9D516A78DF7D9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		BB1B2C3D4E5F60718293A4B5 /* QuickLookSourceFrameReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookSourceFrameReporter.swift; sourceTree = "<group>"; };
 		B11614C1BC86623FBBFC6BC9 /* ShelfViewModelQuickLookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfViewModelQuickLookTests.swift; sourceTree = "<group>"; };
 		C434CA69BBA8550DF6E411AC /* Shelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C814792AA76D8FBACC4D44B4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -120,7 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				A31DA369E5F648B78674A8AD /* LiquidGlassStyle.swift */,
-				BB1B2C3D4E5F60718293A4B5 /* QuickLookSourceFrameReporter.swift */,
+				290211F46392A47877B4F9E3 /* QuickLookSourceFrameReporter.swift */,
 				EC36DCF7107668303D2218A4 /* ShelfContentView.swift */,
 				017371AE4855A7F2EC90E101 /* ShelfItemView.swift */,
 				8C58EA9E17445AA8D21FBA04 /* ShelfViewModel.swift */,
@@ -276,12 +276,6 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					A185BF58E9249C991A17CB0C = {
-						ProvisioningStyle = Automatic;
-					};
-					EC4C211976F788C55AFB7619 = {
-						ProvisioningStyle = Automatic;
-					};
 				};
 			};
 			buildConfigurationList = 7B316EA87C6671F41112A594 /* Build configuration list for PBXProject "Shelf" */;
@@ -346,8 +340,8 @@
 				DF0A2890354CA4DB6D695686 /* LiquidGlassStyle.swift in Sources */,
 				C06BC9D5FA41DD7833A0B4E0 /* MenuBarController.swift in Sources */,
 				6DB3EFDE157406CD9DE407BC /* PanelPositioner.swift in Sources */,
-				AA1B2C3D4E5F60718293A4B5 /* QuickLookSourceFrameReporter.swift in Sources */,
 				206F9D67EC5F24562DAF3B3D /* QuickLookCoordinator.swift in Sources */,
+				EF0D63B57E674A40C3FDD7B5 /* QuickLookSourceFrameReporter.swift in Sources */,
 				59BB2547B9DC60CC415D6088 /* ShakeDetector.swift in Sources */,
 				6093F6DBFC90938CC41C91B1 /* ShelfApplication.swift in Sources */,
 				DB7F7775B6DBBA79035EFB95 /* ShelfContentView.swift in Sources */,
@@ -475,12 +469,13 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGNING_ALLOWED = NO;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9A7P6U2W76;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
