@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # needed to create the release + upload the dmg
+
+jobs:
+  release:
+    name: Build & publish dmg
+    runs-on: macos-26
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      NOTARY_PROFILE: shelf-notary
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: brew install xcodegen create-dmg
+
+      - name: Import Developer ID signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$CERT_PATH" \
+            -P "$MACOS_CERTIFICATE_PWD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign/xcodebuild to use the key without a UI prompt.
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Put our keychain first in the search list so the identity is found.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          security find-identity -p codesigning -v "$KEYCHAIN_PATH"
+
+      - name: Store notarization credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD"
+
+      - name: Verify tag matches app version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PLIST_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Shelf/Info.plist)
+          if [ "$TAG" != "$PLIST_VERSION" ]; then
+            echo "::error::Tag v$TAG does not match Shelf/Info.plist version $PLIST_VERSION. Bump Info.plist and retag."
+            exit 1
+          fi
+
+      - name: Build, sign, notarize, package
+        run: ./scripts/release.sh
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          DMG=$(ls build/Shelf-*.dmg)
+          gh release create "$GITHUB_REF_NAME" "$DMG" \
+            --title "Shelf ${GITHUB_REF_NAME#v}" \
+            --generate-notes
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
