@@ -27,7 +27,9 @@ settings:
       CODE_SIGN_IDENTITY: "Developer ID Application"
       CODE_SIGNING_REQUIRED: YES
       CODE_SIGNING_ALLOWED: YES
-      DEVELOPMENT_TEAM: "9A7P6U2W76"
+      # DEVELOPMENT_TEAM is supplied at archive time by scripts/release.sh
+      # (from the gitignored scripts/release.config.sh) so no personal
+      # identifier is committed to the repo.
 packages:
   ShelfCore:
     path: Modules/ShelfCore

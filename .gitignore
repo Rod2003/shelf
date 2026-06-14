@@ -26,6 +26,9 @@ docs/
 *.swiftpm/
 .swiftpm/
 
+# Local release config (holds maintainer's Team ID — not committed)
+scripts/release.config.sh
+
 # Misc
 *.log
 *.tmp

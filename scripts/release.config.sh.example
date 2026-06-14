@@ -1,0 +1,19 @@
+# Release configuration for scripts/release.sh
+#
+# Copy this file to `scripts/release.config.sh` (gitignored) and fill in your
+# own values. These are maintainer-specific and intentionally kept out of the
+# committed repo.
+#
+#   cp scripts/release.config.sh.example scripts/release.config.sh
+#
+# TEAM_ID         Your Apple Developer Team ID (10 chars). Find it with:
+#                   security find-identity -p codesigning -v | grep "Developer ID"
+# NOTARY_PROFILE  Name of the notarytool keychain profile holding your
+#                 app-specific password. Create it once with:
+#                   xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+#                     --apple-id "<your-apple-id-email>" \
+#                     --team-id "$TEAM_ID" \
+#                     --password "<app-specific-password from appleid.apple.com>"
+
+export TEAM_ID="XXXXXXXXXX"
+export NOTARY_PROFILE="shelf-notary"
