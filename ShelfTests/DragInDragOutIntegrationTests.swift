@@ -173,6 +173,41 @@ final class DragInDragOutIntegrationTests: XCTestCase {
         let items = DragItemFactory.makeItems(from: pb)
         XCTAssertEqual(items.count, 0)
     }
+    func testShakeDetectorDoesNotArmForStaleDragPasteboardContents() throws {
+        let file = try makeTempFile(name: "stale-drag.txt")
+        let pb = makeIsolatedPasteboard()
+        pb.writeObjects([file as NSURL])
+
+        let detector = ShakeDetector(
+            dragPasteboard: pb,
+            pressedMouseButtons: 1
+        )
+        defer { detector.stop() }
+
+        detector.checkDragStarted()
+
+        XCTAssertFalse(
+            detector.isHighFreqSamplingActive,
+            "stale drag pasteboard contents must not arm shake detection"
+        )
+    }
+    func testShakeDetectorArmsForFreshDragPasteboardChange() throws {
+        let file = try makeTempFile(name: "fresh-drag.txt")
+        let pb = makeIsolatedPasteboard()
+        let detector = ShakeDetector(
+            dragPasteboard: pb,
+            pressedMouseButtons: 1
+        )
+        defer { detector.stop() }
+
+        pb.writeObjects([file as NSURL])
+        detector.checkDragStarted()
+
+        XCTAssertTrue(
+            detector.isHighFreqSamplingActive,
+            "fresh drag pasteboard changes must arm shake detection"
+        )
+    }
     func testInternalShelfPasteboardDragYieldsNoItems() throws {
         let file = try makeTempFile(name: "internal-drag.txt")
         let pb = makeIsolatedPasteboard()
