@@ -6,8 +6,9 @@ import ShelfCore
 @MainActor
 public final class ShakeDetector {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
-    private let dragPasteboard = NSPasteboard(name: .drag)
-    private var lastDragChangeCount: Int = 0
+    private let dragPasteboard: NSPasteboard
+    private let pressedMouseButtons: () -> Int
+    private var lastDragChangeCount: Int
     private var lowFreqTimer: Timer?
     private var highFreqTimer: Timer?
     private var dragActiveSince: Date?
@@ -31,7 +32,18 @@ public final class ShakeDetector {
 
     public var onShakeDuringDrag: ((CGPoint) -> Void)?
 
-    public init(config: ShakeHeuristic.Config = .defaultMedium) {
+    var isHighFreqSamplingActive: Bool {
+        dragActiveSince != nil
+    }
+
+    public init(
+        config: ShakeHeuristic.Config = .defaultMedium,
+        dragPasteboard: NSPasteboard = NSPasteboard(name: .drag),
+        pressedMouseButtons: @escaping @autoclosure () -> Int = NSEvent.pressedMouseButtons
+    ) {
+        self.dragPasteboard = dragPasteboard
+        self.pressedMouseButtons = pressedMouseButtons
+        self.lastDragChangeCount = dragPasteboard.changeCount
         self.heuristic = ShakeHeuristic(config: config)
     }
 
@@ -53,24 +65,30 @@ public final class ShakeDetector {
         lowFreqTimer?.invalidate()
         lowFreqTimer = nil
         endHighFreqSampling()
+        lastDragChangeCount = dragPasteboard.changeCount
         log.info("ShakeDetector stopped")
     }
 
-    private func checkDragStarted() {
-        lastDragChangeCount = dragPasteboard.changeCount
+    func checkDragStarted() {
+        let currentChangeCount = dragPasteboard.changeCount
+        defer { lastDragChangeCount = currentChangeCount }
 
-        let isReal = isRealFileDragInFlight()
-        if isReal {
-            if dragActiveSince == nil {
-                beginHighFreqSampling()
+        if dragActiveSince != nil {
+            guard isRealFileDragInFlight() else {
+                endHighFreqSampling()
+                return
             }
-        } else if dragActiveSince != nil {
-            endHighFreqSampling()
+            return
         }
+
+        guard currentChangeCount != lastDragChangeCount else { return }
+        guard isRealFileDragInFlight() else { return }
+
+        beginHighFreqSampling()
     }
 
     private func isRealFileDragInFlight() -> Bool {
-        guard NSEvent.pressedMouseButtons != 0 else { return false }
+        guard pressedMouseButtons() != 0 else { return false }
         let advertised = dragPasteboard.types ?? []
         return !Set(advertised).isDisjoint(with: Self.droppableTypes)
     }
@@ -95,6 +113,7 @@ public final class ShakeDetector {
         highFreqTimer = nil
         dragActiveSince = nil
         lastSampleTime = nil
+        lastDragChangeCount = dragPasteboard.changeCount
         heuristic.reset()
     }
 
