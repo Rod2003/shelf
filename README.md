@@ -107,20 +107,6 @@ When Shelf is focused:
 | Remove selected items (expanded view) | `Delete` / `Forward Delete` |
 | Quit Shelf | `⌘Q` |
 
-## Behavior notes
-
-- Shelf keeps its contents between launches until you clear them.
-- Files are stored as references to their original locations rather than copied into Shelf.
-- Images dropped into Shelf are managed internally by the app.
-- Shelf is a menu bar utility, not a file manager or notes app.
-- Shelf is designed around a single active shelf.
-
-## Tips
-
-- If you are already dragging something, shaking the cursor during the drag can bring up Shelf so you can drop the item immediately.
-- Use **Esc** when you want to temporarily dismiss Shelf and come back to it later.
-- Use **Space** to preview a file or image before dragging it back out.
-
 ## Building from source
 
 ```sh
