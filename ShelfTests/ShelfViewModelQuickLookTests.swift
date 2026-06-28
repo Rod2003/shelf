@@ -143,4 +143,40 @@ final class ShelfViewModelQuickLookTests: XCTestCase {
         XCTAssertTrue(vm.isExpanded)
         XCTAssertEqual(animateWindowCalls, 1)
     }
+
+    func testCollapseDuringPendingExpandCancelsTransition() async {
+        let shelf = makeShelf(itemCount: 3)
+        let vm = ShelfViewModel(shelf: shelf)
+        let expansionStarted = expectation(description: "expansion window animation started")
+        let collapseStarted = expectation(description: "collapse window animation started")
+        var animationRequests: [Bool] = []
+        var expansionCompletion: (() -> Void)?
+        var collapseCompletion: (() -> Void)?
+
+        vm.animateWindow = { expanded, _, completion in
+            animationRequests.append(expanded)
+            if expanded {
+                expansionCompletion = completion
+                expansionStarted.fulfill()
+            } else {
+                collapseCompletion = completion
+                collapseStarted.fulfill()
+            }
+        }
+
+        vm.setExpanded(true)
+        await fulfillment(of: [expansionStarted], timeout: 1.0)
+
+        vm.setExpanded(false)
+        expansionCompletion?()
+        await fulfillment(of: [collapseStarted], timeout: 1.0)
+        collapseCompletion?()
+
+        try? await Task.sleep(nanoseconds: 400_000_000)
+
+        XCTAssertFalse(vm.isExpanded)
+        XCTAssertTrue(vm.showsCollapsedPill)
+        XCTAssertFalse(vm.hidesDrawerLabels)
+        XCTAssertEqual(animationRequests, [true, false])
+    }
 }

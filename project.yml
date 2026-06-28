@@ -47,8 +47,8 @@ targets:
         CFBundleName: Shelf
         CFBundleIdentifier: dev.rod.shelf
         CFBundleExecutable: Shelf
-        CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "1.0.2"
+        CFBundleVersion: "3"
         CFBundlePackageType: APPL
         CFBundleIconName: AppIcon
         CFBundleInfoDictionaryVersion: "6.0"
