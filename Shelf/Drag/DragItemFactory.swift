@@ -243,11 +243,9 @@ enum DropItemBuilder {
 private extension DragItemFactory {
     static func readFileURLs(from providers: [NSItemProvider]) async -> [URL]? {
         var urls: [URL] = []
-        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            if let url = await loadURL(from: provider, typeIdentifier: UTType.fileURL.identifier),
-               url.isFileURL {
-                urls.append(url)
-            }
+        for provider in providers where provider.hasRegisteredOrConformingItem(UTType.fileURL.identifier) {
+            let providerURLs = await loadURLs(from: provider, typeIdentifier: UTType.fileURL.identifier)
+            urls.append(contentsOf: providerURLs.filter(\.isFileURL))
         }
         return urls.isEmpty ? nil : urls
     }
@@ -299,14 +297,18 @@ private extension DragItemFactory {
     }
 
     static func loadURL(from provider: NSItemProvider, typeIdentifier: String) async -> URL? {
+        await loadURLs(from: provider, typeIdentifier: typeIdentifier).first
+    }
+
+    static func loadURLs(from provider: NSItemProvider, typeIdentifier: String) async -> [URL] {
         if provider.canLoadObject(ofClass: NSURL.self),
            let url = await loadURLObject(from: provider) {
-            return url
+            return [url]
         }
         guard let item = await loadItem(from: provider, typeIdentifier: typeIdentifier) else {
-            return nil
+            return []
         }
-        return coerceURL(from: item)
+        return coerceURLs(from: item)
     }
 
     static func loadURLObject(from provider: NSItemProvider) async -> URL? {
@@ -376,10 +378,35 @@ private extension DragItemFactory {
         return nil
     }
 
+    static func coerceURLs(from item: NSSecureCoding) -> [URL] {
+        if let url = coerceURL(from: item) {
+            return [url]
+        }
+        guard let array = item as? NSArray else {
+            return []
+        }
+        return array.compactMap { element in
+            if let coding = element as? NSSecureCoding {
+                return coerceURL(from: coding)
+            }
+            if let string = element as? String {
+                return URL(string: string)
+            }
+            return nil
+        }
+    }
+
     static func isWebURL(_ url: URL) -> Bool {
         guard !url.isFileURL, let scheme = url.scheme?.lowercased() else {
             return false
         }
         return scheme == "http" || scheme == "https"
+    }
+}
+
+private extension NSItemProvider {
+    func hasRegisteredOrConformingItem(_ typeIdentifier: String) -> Bool {
+        registeredTypeIdentifiers.contains(typeIdentifier)
+            || hasItemConformingToTypeIdentifier(typeIdentifier)
     }
 }

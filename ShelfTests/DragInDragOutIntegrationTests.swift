@@ -200,6 +200,7 @@ final class DragInDragOutIntegrationTests: XCTestCase {
         )
         defer { detector.stop() }
 
+        pb.clearContents()
         pb.writeObjects([file as NSURL])
         detector.checkDragStarted()
 
@@ -230,6 +231,20 @@ final class DragInDragOutIntegrationTests: XCTestCase {
             return XCTFail("expected .fileBookmark, got \(items[0].kind)")
         }
         XCTAssertEqual(record.originalPath, file.path)
+    }
+    func testSwiftUIDropSingleProviderWithMultipleFileURLsProducesMultipleItems() async throws {
+        let fileA = try makeTempFile(name: "provider-array-a.txt")
+        let fileB = try makeTempFile(name: "provider-array-b.txt")
+        let provider = MultiFileURLItemProvider(urls: [fileA, fileB])
+
+        let items = await DragItemFactory.makeItems(from: [provider])
+
+        XCTAssertEqual(items.count, 2)
+        let paths = items.compactMap { item -> String? in
+            guard case let .fileBookmark(record) = item.kind else { return nil }
+            return record.originalPath
+        }
+        XCTAssertEqual(Set(paths), Set([fileA.path, fileB.path]))
     }
     func testSwiftUIInternalShelfProviderDragYieldsNoItems() async throws {
         let file = try makeTempFile(name: "provider-internal-drag.txt")
@@ -282,5 +297,34 @@ final class DragInDragOutIntegrationTests: XCTestCase {
                 XCTFail("mailto must not produce a .webURL item")
             }
         }
+    }
+}
+
+private final class MultiFileURLItemProvider: NSItemProvider {
+    private let urls: [URL]
+
+    init(urls: [URL]) {
+        self.urls = urls
+        super.init()
+    }
+
+    override var registeredTypeIdentifiers: [String] {
+        [UTType.fileURL.identifier]
+    }
+
+    override func hasItemConformingToTypeIdentifier(_ typeIdentifier: String) -> Bool {
+        typeIdentifier == UTType.fileURL.identifier
+    }
+
+    override func loadItem(
+        forTypeIdentifier typeIdentifier: String,
+        options: [AnyHashable: Any]? = nil,
+        completionHandler: NSItemProvider.CompletionHandler? = nil
+    ) {
+        guard typeIdentifier == UTType.fileURL.identifier else {
+            completionHandler?(nil, nil)
+            return
+        }
+        completionHandler?(urls.map { $0 as NSURL } as NSArray, nil)
     }
 }
