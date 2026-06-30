@@ -30,8 +30,6 @@ settings:
       # DEVELOPMENT_TEAM is supplied at archive time by scripts/release.sh
       # (from the gitignored scripts/release.config.sh) so no personal
       # identifier is committed to the repo.
-      # Shrink the distributed app: strip symbols (~1MB of __LINKEDIT),
-      # optimize Swift for size, and compress the asset catalog.
       STRIP_INSTALL_PRODUCT: YES
       STRIP_STYLE: all
       SWIFT_OPTIMIZATION_LEVEL: "-Osize"
