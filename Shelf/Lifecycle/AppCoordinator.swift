@@ -22,6 +22,7 @@ public final class AppCoordinator {
 
     private var viewModel: ShelfViewModel?
     private var collapsedSize: CGSize?
+    private var aboutCloseObserver: NSObjectProtocol?
 
     public init() {
         self.defaultsBackend = DefaultsBackend()
@@ -69,8 +70,8 @@ public final class AppCoordinator {
         menuBar.onFocusShelf = { [weak self] in
             self?.windowManager.focusShelf(wantsKey: true)
         }
-        menuBar.onAbout = {
-            NSApp.orderFrontStandardAboutPanel(nil)
+        menuBar.onAbout = { [weak self] in
+            self?.showAboutPanel()
         }
         menuBar.onQuit = {
             NSApp.terminate(nil)
@@ -181,6 +182,57 @@ public final class AppCoordinator {
 
     private func publishActiveShelfToMenu() {
         menuBar.activeShelf = windowManager.visibleShelfCount > 0 ? shelfStore.current() : nil
+    }
+
+    private func showAboutPanel() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+
+        let priorWindows = Set(NSApp.windows.map { ObjectIdentifier($0) })
+        NSApp.orderFrontStandardAboutPanel(nil)
+
+        guard let aboutWindow = NSApp.windows.first(where: { $0.title.hasPrefix("About") })
+            ?? NSApp.windows.first(where: { !priorWindows.contains(ObjectIdentifier($0)) })
+        else {
+            return
+        }
+
+        aboutWindow.hidesOnDeactivate = false
+        aboutWindow.level = .floating
+        aboutWindow.collectionBehavior.insert(.moveToActiveSpace)
+        aboutWindow.makeKeyAndOrderFront(nil)
+        aboutWindow.orderFrontRegardless()
+        observeAboutWindowClose(aboutWindow)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NSApp.activate(ignoringOtherApps: true)
+            aboutWindow.makeKeyAndOrderFront(nil)
+            aboutWindow.orderFrontRegardless()
+        }
+    }
+
+    private func observeAboutWindowClose(_ window: NSWindow) {
+        if let aboutCloseObserver {
+            NotificationCenter.default.removeObserver(aboutCloseObserver)
+            self.aboutCloseObserver = nil
+        }
+        aboutCloseObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.restoreAccessoryPolicyAfterAbout()
+            }
+        }
+    }
+
+    private func restoreAccessoryPolicyAfterAbout() {
+        if let aboutCloseObserver {
+            NotificationCenter.default.removeObserver(aboutCloseObserver)
+            self.aboutCloseObserver = nil
+        }
+        NSApp.setActivationPolicy(.accessory)
     }
 
     private func appendItems(_ items: [ShelfItem]) {
