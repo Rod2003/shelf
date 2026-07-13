@@ -138,7 +138,10 @@ public final class MenuBarController: NSObject {
 
     @objc private func handleAbout() {
         log.info("About Shelf invoked from menu")
-        onAbout?()
+        statusItem.menu?.cancelTracking()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.onAbout?()
+        }
     }
 
     @objc private func handleQuit() {
