@@ -80,7 +80,10 @@ public final class QuickLookCoordinator: NSObject {
         self.sourceFramesByItemID = sourceFramesByItemID
         heldResolutions = bookmarkResolutions
 
-        let panel = QLPreviewPanel.shared()!
+        guard let panel = QLPreviewPanel.shared() else {
+            log.error("Quick Look panel is unavailable; aborting preview")
+            return
+        }
         panel.dataSource = self
         panel.delegate = self
         installCloseObserverIfNeeded(panel: panel)
