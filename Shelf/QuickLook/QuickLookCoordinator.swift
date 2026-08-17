@@ -2,8 +2,16 @@ import AppKit
 import QuickLookUI
 import OSLog
 import ShelfCore
+
 @MainActor
-public final class QuickLookCoordinator: NSObject {
+public protocol QuickLookPanelHosting: AnyObject {
+    func acceptsPreviewPanelControl() -> Bool
+    func beginPreviewPanelControl()
+    func endPreviewPanelControl()
+}
+
+@MainActor
+public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     public struct Preview {
         public let itemID: ItemID
         public let url: URL
@@ -39,10 +47,13 @@ public final class QuickLookCoordinator: NSObject {
     private var heldResolutions: [BookmarkResolver.Resolution] = []
     private var observer: NSObjectProtocol?
     private var keyMonitor: Any?
+    private var isPresenting = false
+    private var spaceSession = QuickLookSpaceSession()
 
     public var onDidClose: (() -> Void)?
+    public var onOpenRequested: (() -> Void)?
     public var isVisible: Bool {
-        !currentItems.isEmpty && QLPreviewPanel.shared()?.isVisible == true
+        isPresenting && !currentItems.isEmpty && QLPreviewPanel.shared()?.isVisible == true
     }
 
     public init(resolver: BookmarkResolver) {
@@ -70,22 +81,23 @@ public final class QuickLookCoordinator: NSObject {
         releaseHeldResolutions()
 
         guard !previews.isEmpty else {
-            currentItems = []
-            self.sourceFramesByItemID = [:]
-            QLPreviewPanel.shared().close()
+            if isPresenting {
+                closePanelAndReset()
+            }
             return
         }
 
         currentItems = previews.map { PreviewItem(itemID: $0.itemID, url: $0.url) }
         self.sourceFramesByItemID = sourceFramesByItemID
         heldResolutions = bookmarkResolutions
+        isPresenting = true
 
         guard let panel = QLPreviewPanel.shared() else {
             log.error("Quick Look panel is unavailable; aborting preview")
+            closePanelAndReset()
             return
         }
-        panel.dataSource = self
-        panel.delegate = self
+        becomePreviewController(for: panel)
         installCloseObserverIfNeeded(panel: panel)
         installKeyMonitorIfNeeded()
         panel.makeKeyAndOrderFront(nil)
@@ -96,18 +108,27 @@ public final class QuickLookCoordinator: NSObject {
     @discardableResult
     public func closeIfVisible() -> Bool {
         let panel = QLPreviewPanel.shared()
-        guard !currentItems.isEmpty, panel?.isVisible == true else {
+        guard isVisible else {
             log.debug("Quick Look close skipped: visible=\(panel?.isVisible == true, privacy: .public) currentItemCount=\(self.currentItems.count, privacy: .public)")
             return false
         }
         log.info("Quick Look close requested panelKey=\(panel?.isKeyWindow == true, privacy: .public)")
         panel?.close()
-        releaseHeldResolutions()
-        currentItems = []
-        sourceFramesByItemID = [:]
+        finishClose()
         log.info("Quick Look closed from Space toggle")
         return true
     }
+
+    public func acceptsPreviewPanelControl() -> Bool {
+        isPresenting && !currentItems.isEmpty
+    }
+
+    public func beginPreviewPanelControl() {
+        guard let panel = QLPreviewPanel.shared() else { return }
+        becomePreviewController(for: panel)
+    }
+
+    public func endPreviewPanelControl() {}
 
     private func installCloseObserverIfNeeded(panel: QLPreviewPanel) {
         guard observer == nil else { return }
@@ -116,40 +137,95 @@ public final class QuickLookCoordinator: NSObject {
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                self?.handlePanelDidClose()
+            MainActor.assumeIsolated {
+                self?.finishClose()
             }
         }
     }
 
     private func installKeyMonitorIfNeeded() {
         guard keyMonitor == nil else { return }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.charactersIgnoringModifiers == " " else {
-                return event
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+            guard let self else { return event }
+            return MainActor.assumeIsolated {
+                self.handleMonitoredEvent(event)
             }
-            Task { @MainActor in
-                self?.log.info("Quick Look Space intercepted by local monitor")
-                self?.closeIfVisible()
-            }
-            return nil
         }
         log.debug("Quick Look local key monitor installed")
     }
 
+    @discardableResult
+    public func handleSpaceEvent(_ event: NSEvent) -> Bool {
+        guard SpaceKey.isUnmodifiedSpace(event) else { return false }
+        switch event.type {
+        case .keyDown:
+            handleSpaceKeyDown(event)
+        case .keyUp:
+            handleSpaceKeyUp(event)
+        default:
+            break
+        }
+        return true
+    }
+
+    private func handleSpaceKeyDown(_ event: NSEvent) {
+        switch spaceSession.handleKeyDown(isRepeat: event.isARepeat, at: event.timestamp) {
+        case .ignore:
+            log.debug("Quick Look Space ignored (repeat or unreleased press)")
+        case .toggle:
+            if isVisible {
+                _ = closeIfVisible()
+            } else {
+                onOpenRequested?()
+                if isVisible {
+                    spaceSession.markOpenedQuickLook()
+                }
+            }
+        }
+    }
+
+    private func handleSpaceKeyUp(_ event: NSEvent) {
+        switch spaceSession.handleKeyUp(at: event.timestamp) {
+        case .ignore:
+            break
+        case .dismissPeek:
+            log.info("Quick Look dismissed on Space release")
+            _ = closeIfVisible()
+        }
+    }
+
+    private func handleMonitoredEvent(_ event: NSEvent) -> NSEvent? {
+        handleSpaceEvent(event) ? nil : event
+    }
+
     private func removeKeyMonitor() {
         guard let keyMonitor else { return }
-        NSEvent.removeMonitor(keyMonitor)
         self.keyMonitor = nil
+        DispatchQueue.main.async {
+            NSEvent.removeMonitor(keyMonitor)
+        }
         log.debug("Quick Look local key monitor removed")
     }
 
-    private func handlePanelDidClose() {
-        log.info("Quick Look panel did close")
+    private func becomePreviewController(for panel: QLPreviewPanel) {
+        panel.dataSource = self
+        panel.delegate = self
+    }
+
+    private func closePanelAndReset() {
+        QLPreviewPanel.shared()?.close()
+        finishClose()
+    }
+
+    private func finishClose() {
+        let shouldNotifyClose = isPresenting
+        isPresenting = false
         removeKeyMonitor()
         releaseHeldResolutions()
         currentItems = []
         sourceFramesByItemID = [:]
+        guard shouldNotifyClose else { return }
+        log.info("Quick Look panel did close")
         onDidClose?()
     }
 
@@ -173,13 +249,7 @@ extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDataSource {
 
 extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDelegate {
     public func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
-        guard event.type == .keyDown,
-              event.charactersIgnoringModifiers == " " else {
-            return false
-        }
-        log.info("Quick Look Space intercepted by preview panel delegate")
-        closeIfVisible()
-        return true
+        handleSpaceEvent(event)
     }
 
     public func previewPanel(

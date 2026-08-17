@@ -59,6 +59,9 @@ public final class AppCoordinator {
             self?.log.info("Quick Look did close; restoring shelf focus")
             self?.windowManager.focusShelf(wantsKey: true)
         }
+        quickLook.onOpenRequested = { [weak self] in
+            self?.openQuickLookForKeyShelf()
+        }
 
         shakeDetector.onShakeDuringDrag = { [weak self] _ in
             self?.showShelfAtCursor()
@@ -151,17 +154,18 @@ public final class AppCoordinator {
 
     private func wireKeyHandling(_ viewModel: ShelfViewModel) {
         guard let controller = windowManager.shelfController() else { return }
+        controller.quickLookPanelHost = quickLook
         // Handled locally by the panel, so these act only while the shelf is the
         // key window — never as system-wide hotkeys that swallow keys globally.
         // Keys also yield to focused text fields, which consume them first.
         controller.onKeyDown = { [weak self, weak viewModel] event in
             guard let self else { return false }
+            if self.quickLook.handleSpaceEvent(event) {
+                return true
+            }
             switch event.keyCode {
             case 53: // Esc — close the shelf
                 self.windowManager.closeShelf()
-                return true
-            case 49: // Space — toggle Quick Look for the focused shelf
-                self.invokeQuickLookForKeyShelf()
                 return true
             case 51, 117: // Delete / Forward Delete — remove selection (expanded only)
                 guard let viewModel, viewModel.isExpanded else { return false }
@@ -172,6 +176,9 @@ public final class AppCoordinator {
             default:
                 return false
             }
+        }
+        controller.onKeyUp = { [weak self] event in
+            self?.quickLook.handleSpaceEvent(event) ?? false
         }
     }
 
@@ -335,11 +342,8 @@ public final class AppCoordinator {
         }
     }
 
-    private func invokeQuickLookForKeyShelf() {
-        log.debug("Quick Look hotkey received shelfKey=\(self.windowManager.isShelfKey(), privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
-        if quickLook.closeIfVisible() {
-            return
-        }
+    private func openQuickLookForKeyShelf() {
+        log.debug("Quick Look open requested shelfKey=\(self.windowManager.isShelfKey(), privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
 
         guard windowManager.isShelfKey() else {
             log.debug("Quick Look skipped: no key shelf")
