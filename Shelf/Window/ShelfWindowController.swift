@@ -1,6 +1,7 @@
 import AppKit
 import OSLog
 import QuartzCore
+import QuickLookUI
 import ShelfCore
 
 @MainActor
@@ -11,6 +12,8 @@ public protocol ShelfWindowControllerDelegate: AnyObject {
 public final class ShelfKeyHandlingPanel: NSPanel {
     /// Return true to consume; false to let the responder chain handle it.
     public var onKeyDown: ((NSEvent) -> Bool)?
+    public var onKeyUp: ((NSEvent) -> Bool)?
+    public weak var quickLookPanelHost: QuickLookPanelHosting?
 
     public override var canBecomeKey: Bool { true }
     public override var canBecomeMain: Bool { false }
@@ -19,6 +22,23 @@ public final class ShelfKeyHandlingPanel: NSPanel {
     public override func keyDown(with event: NSEvent) {
         if onKeyDown?(event) == true { return }
         super.keyDown(with: event)
+    }
+
+    public override func keyUp(with event: NSEvent) {
+        if onKeyUp?(event) == true { return }
+        super.keyUp(with: event)
+    }
+
+    public override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
+        quickLookPanelHost?.acceptsPreviewPanelControl() ?? false
+    }
+
+    public override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        quickLookPanelHost?.beginPreviewPanelControl()
+    }
+
+    public override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        quickLookPanelHost?.endPreviewPanelControl()
     }
 }
 
@@ -31,6 +51,16 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public var onKeyDown: ((NSEvent) -> Bool)? {
         get { panel.onKeyDown }
         set { panel.onKeyDown = newValue }
+    }
+
+    public var onKeyUp: ((NSEvent) -> Bool)? {
+        get { panel.onKeyUp }
+        set { panel.onKeyUp = newValue }
+    }
+
+    public var quickLookPanelHost: QuickLookPanelHosting? {
+        get { panel.quickLookPanelHost }
+        set { panel.quickLookPanelHost = newValue }
     }
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
