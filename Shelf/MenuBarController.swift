@@ -48,34 +48,17 @@ public final class MenuBarController: NSObject {
         newItem.target = self
         menu.addItem(newItem)
 
-        menu.addItem(.separator())
-
-        let activeMenuItem = NSMenuItem(
-            title: "Active Shelf",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let activeSubmenu = NSMenu()
         if let activeShelf {
-            let empty = NSMenuItem(
+            menu.addItem(.separator())
+            let focusItem = NSMenuItem(
                 title: Self.summary(for: activeShelf),
-                action: #selector(handleActive),
+                action: #selector(handleFocusShelf),
                 keyEquivalent: ""
             )
-            empty.target = self
-            empty.toolTip = Self.tooltip(for: activeShelf)
-            activeSubmenu.addItem(empty)
-        } else {
-            let empty = NSMenuItem(
-                title: "No Active Shelf",
-                action: nil,
-                keyEquivalent: ""
-            )
-            empty.isEnabled = false
-            activeSubmenu.addItem(empty)
+            focusItem.target = self
+            focusItem.toolTip = Self.tooltip(for: activeShelf)
+            menu.addItem(focusItem)
         }
-        activeMenuItem.submenu = activeSubmenu
-        menu.addItem(activeMenuItem)
 
         menu.addItem(.separator())
 
@@ -131,8 +114,8 @@ public final class MenuBarController: NSObject {
         onShowShelf?()
     }
 
-    @objc private func handleActive() {
-        log.info("Active shelf selected from menu")
+    @objc private func handleFocusShelf() {
+        log.info("Focus shelf invoked from menu")
         onFocusShelf?()
     }
 

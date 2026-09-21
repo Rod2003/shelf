@@ -11,8 +11,6 @@ public enum PanelPositioner {
     public static let expansionDuration: TimeInterval = 0.32
     public static let defaultPanelSize = collapsedPanelSize
 
-    public static let cascadeOffsetPx: CGFloat = 30
-
     public struct Screen: Equatable {
         public let frame: CGRect
         public let visibleFrame: CGRect
@@ -44,18 +42,6 @@ public enum PanelPositioner {
             panelSize: panelSize,
             in: screen.visibleFrame,
             edgeMargin: edgeMargin
-        )
-    }
-
-    public static func cascadeOrigin(
-        baseOrigin: CGPoint,
-        existingCount: Int,
-        offsetPerPanel: CGFloat = cascadeOffsetPx
-    ) -> CGPoint {
-        let n = existingCount % 8
-        return CGPoint(
-            x: baseOrigin.x + offsetPerPanel * CGFloat(n),
-            y: baseOrigin.y - offsetPerPanel * CGFloat(n)
         )
     }
 
