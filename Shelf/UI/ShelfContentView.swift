@@ -15,7 +15,6 @@ public struct ShelfContentView: View {
     @State private var isCloseHovering: Bool = false
     @State private var isCollapseHovering: Bool = false
     @State private var keepsCollapseButtonMounted: Bool = false
-    @Namespace private var morphNamespace
 
     public init(
         viewModel: ShelfViewModel,
@@ -173,7 +172,6 @@ public struct ShelfContentView: View {
                     viewModel: viewModel,
                     resolver: resolver,
                     thumbnailService: thumbnailService,
-                    namespace: morphNamespace,
                     onSingleDragEnded: onSingleDragEnded,
                     onMultiDragEnded: onMultiDragEnded
                 )
@@ -232,7 +230,6 @@ public struct ShelfContentView: View {
             viewModel: viewModel,
             resolver: resolver,
             thumbnailService: thumbnailService,
-            namespace: morphNamespace,
             onSingleDragEnded: onSingleDragEnded,
             onMultiDragEnded: onMultiDragEnded,
             onDeleteItems: onDeleteItems,
@@ -249,7 +246,6 @@ private struct StackedShelfView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
-    let namespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
 
@@ -284,8 +280,7 @@ private struct StackedShelfView: View {
                         StackCardsView(
                             items: viewModel.items,
                             resolver: resolver,
-                            thumbnailService: thumbnailService,
-                            namespace: namespace
+                            thumbnailService: thumbnailService
                         )
                     }
                     .frame(
@@ -340,7 +335,6 @@ private struct StackCardsView: View {
     let items: [ShelfItem]
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
-    let namespace: Namespace.ID
 
     private var visibleLayers: [StackLayer] {
         let layers = zip(items.prefix(3), Self.layerStyles).map { item, style in
@@ -560,7 +554,6 @@ private struct ShelfDrawerView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
-    let namespace: Namespace.ID
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     let onDeleteItems: ((Set<ItemID>) -> Void)?
