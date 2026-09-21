@@ -1,13 +1,13 @@
 import AppKit
 import SwiftUI
-public struct WindowDragHandle: NSViewRepresentable {
-    public init() {}
+struct WindowDragHandle: NSViewRepresentable {
+    init() {}
 
-    public func makeNSView(context: Context) -> NSView {
+    func makeNSView(context: Context) -> NSView {
         DragHandleNSView()
     }
 
-    public func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 private final class DragHandleNSView: NSView {
     override var mouseDownCanMoveWindow: Bool { true }
