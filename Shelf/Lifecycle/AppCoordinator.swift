@@ -148,7 +148,7 @@ public final class AppCoordinator {
         wireWindowAnimation(viewModel)
         wireKeyHandling(viewModel)
         publishActiveShelfToMenu()
-        log.info("Showed shelf id=\(shelf.id.rawValue.uuidString, privacy: .public)")
+        log.info("Showed shelf id=\(shelf.id.uuidString, privacy: .public)")
     }
 
     private func wireKeyHandling(_ viewModel: ShelfViewModel) {
@@ -294,7 +294,7 @@ public final class AppCoordinator {
         log.info("Removed \(removedCount, privacy: .public) duplicate existing shelf item(s)")
     }
 
-    private func removeItems(_ itemIDs: Set<ItemID>) {
+    private func removeItems(_ itemIDs: Set<UUID>) {
         guard !itemIDs.isEmpty else { return }
         shelfStore.update { shelf in
             shelf.items.removeAll { itemIDs.contains($0.id) }
@@ -393,7 +393,7 @@ public final class AppCoordinator {
                 resolutions.append(resolution)
                 previews.append(QuickLookCoordinator.Preview(itemID: item.id, url: resolution.url))
             } catch {
-                log.warning("Quick Look bookmark resolve failed for id=\(item.id.rawValue.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
+                log.warning("Quick Look bookmark resolve failed for id=\(item.id.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
             }
 
         case .clipboardImage(let filename):
@@ -411,7 +411,7 @@ public final class AppCoordinator {
         let itemID = result.itemID
 
         if operation.isEmpty {
-            log.debug("Drag-out cancelled for item id=\(itemID.rawValue.uuidString, privacy: .public)")
+            log.debug("Drag-out cancelled for item id=\(itemID.uuidString, privacy: .public)")
             return
         }
 
@@ -420,7 +420,7 @@ public final class AppCoordinator {
             return
         }
         guard let item = shelf.items.first(where: { $0.id == itemID }) else {
-            log.warning("Drag-out: item id=\(itemID.rawValue.uuidString, privacy: .public) not found in shelf")
+            log.warning("Drag-out: item id=\(itemID.uuidString, privacy: .public) not found in shelf")
             return
         }
 
@@ -440,11 +440,11 @@ public final class AppCoordinator {
                 viewModel?.reload(from: updated)
             }
             log.info(
-                "Drag-out MOVE completed id=\(itemID.rawValue.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public)"
+                "Drag-out MOVE completed id=\(itemID.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public)"
             )
         } else {
             log.info(
-                "Drag-out completed without promise confirmation; preserving original and keeping cell so user can retry. id=\(itemID.rawValue.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public) promiseAttempted=\(result.promiseAttempted, privacy: .public) promiseSucceeded=\(result.promiseSucceeded, privacy: .public)"
+                "Drag-out completed without promise confirmation; preserving original and keeping cell so user can retry. id=\(itemID.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public) promiseAttempted=\(result.promiseAttempted, privacy: .public) promiseSucceeded=\(result.promiseSucceeded, privacy: .public)"
             )
         }
     }
@@ -459,7 +459,7 @@ public final class AppCoordinator {
             return
         }
 
-        let confirmedIDs = Set(result.outcomes.compactMap { outcome -> ItemID? in
+        let confirmedIDs = Set(result.outcomes.compactMap { outcome -> UUID? in
             guard let item = shelf.items.first(where: { $0.id == outcome.itemID }) else { return nil }
             return isMultiDragOutConfirmed(item: item, outcome: outcome, operation: result.operation)
                 ? outcome.itemID
@@ -521,7 +521,7 @@ public final class AppCoordinator {
             for item in shelf.items {
                 switch item.kind {
                 case .fileBookmark:
-                    liveItemDirs.insert(item.id.rawValue.uuidString)
+                    liveItemDirs.insert(item.id.uuidString)
                 case .clipboardImage(let filename):
                     liveClipboardFiles.insert(filename)
                 case .webURL, .text:

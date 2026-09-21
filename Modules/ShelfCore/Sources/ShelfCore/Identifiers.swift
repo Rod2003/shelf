@@ -1,17 +1,28 @@
 import Foundation
 
-public struct ShelfGroupID: Hashable, Codable, Sendable {
-    public let rawValue: UUID
+enum LegacyUUIDCodingKey: String, CodingKey {
+    case rawValue
+}
 
-    public init(rawValue: UUID = UUID()) {
-        self.rawValue = rawValue
+extension KeyedDecodingContainer {
+    func decodeLegacyUUID(forKey key: Key) throws -> UUID {
+        if let uuid = try? decode(UUID.self, forKey: key) {
+            return uuid
+        }
+        let nested = try nestedContainer(keyedBy: LegacyUUIDCodingKey.self, forKey: key)
+        return try nested.decode(UUID.self, forKey: .rawValue)
     }
 }
 
-public struct ItemID: Hashable, Codable, Sendable {
-    public let rawValue: UUID
+struct WrappedOrBareUUID: Decodable {
+    let value: UUID
 
-    public init(rawValue: UUID = UUID()) {
-        self.rawValue = rawValue
+    init(from decoder: Decoder) throws {
+        if let uuid = try? UUID(from: decoder) {
+            value = uuid
+            return
+        }
+        let container = try decoder.container(keyedBy: LegacyUUIDCodingKey.self)
+        value = try container.decode(UUID.self, forKey: .rawValue)
     }
 }

@@ -27,25 +27,25 @@ final class ShelfTests: XCTestCase {
         )
         let items: [ShelfItem] = [
             ShelfItem(
-                id: ItemID(rawValue: UUID()),
+                id: UUID(),
                 kind: .fileBookmark(bookmark),
                 displayName: "doc.pdf",
                 createdAt: Date(timeIntervalSince1970: 1_700_000_010)
             ),
             ShelfItem(
-                id: ItemID(rawValue: UUID()),
+                id: UUID(),
                 kind: .webURL(URL(string: "https://example.com")!),
                 displayName: "Example",
                 createdAt: Date(timeIntervalSince1970: 1_700_000_020)
             ),
             ShelfItem(
-                id: ItemID(rawValue: UUID()),
+                id: UUID(),
                 kind: .text("a snippet"),
                 displayName: "Snippet",
                 createdAt: Date(timeIntervalSince1970: 1_700_000_030)
             ),
             ShelfItem(
-                id: ItemID(rawValue: UUID()),
+                id: UUID(),
                 kind: .clipboardImage(filename: "img.png"),
                 displayName: "Image",
                 createdAt: Date(timeIntervalSince1970: 1_700_000_040)
@@ -54,7 +54,7 @@ final class ShelfTests: XCTestCase {
         let createdAt = Date(timeIntervalSince1970: 1_699_000_000)
         let lastUsedAt = Date(timeIntervalSince1970: 1_700_500_000)
         let original = ShelfGroup(
-            id: ShelfGroupID(rawValue: UUID()),
+            id: UUID(),
             name: "Mixed",
             items: items,
             createdAt: createdAt,

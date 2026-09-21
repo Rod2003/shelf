@@ -40,7 +40,7 @@ public final class ShelfKeyHandlingPanel: NSPanel {
 
 @MainActor
 public final class ShelfWindowController: NSObject, NSWindowDelegate {
-    public let shelfID: ShelfGroupID
+    public let shelfID: UUID
     public let panel: ShelfKeyHandlingPanel
     public var onDidClose: (() -> Void)?
 
@@ -62,7 +62,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 
     public init(
-        shelfID: ShelfGroupID,
+        shelfID: UUID,
         contentView: NSView,
         atOrigin: CGPoint,
         panelSize: CGSize = PanelPositioner.collapsedPanelSize
@@ -106,12 +106,12 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public func show() {
         panel.orderFrontRegardless()
         panel.makeKey()
-        log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Shelf panel shown id=\(self.shelfID.uuidString, privacy: .public)")
     }
 
     public func close() {
         panel.close()
-        log.info("Shelf panel close requested id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Shelf panel close requested id=\(self.shelfID.uuidString, privacy: .public)")
     }
 
     private static func applyRoundedClearMask(to layer: CALayer?) {
