@@ -3,10 +3,10 @@ import OSLog
 import ShelfCore
 import UniformTypeIdentifiers
 
-public enum DragItemFactory {
+enum DragItemFactory {
     private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
 
-    public static let acceptedContentTypes: [UTType] = [
+    static let acceptedContentTypes: [UTType] = [
         .fileURL,
         .url,
         .png,
@@ -15,7 +15,7 @@ public enum DragItemFactory {
         .plainText,
         .text
     ]
-    public static let droppablePasteboardTypes: Set<NSPasteboard.PasteboardType> = [
+    static let droppablePasteboardTypes: Set<NSPasteboard.PasteboardType> = [
         .fileURL,
         .URL,
         .png,
@@ -24,10 +24,10 @@ public enum DragItemFactory {
         NSPasteboard.PasteboardType("public.image"),
         .string
     ]
-    public static let internalShelfDragType = NSPasteboard.PasteboardType("dev.rod.shelf.internal-drag")
-    public static let internalShelfDragTypeIdentifier = internalShelfDragType.rawValue
+    static let internalShelfDragType = NSPasteboard.PasteboardType("dev.rod.shelf.internal-drag")
+    static let internalShelfDragTypeIdentifier = internalShelfDragType.rawValue
 
-    public static func makeItems(from pasteboard: NSPasteboard) -> [ShelfItem] {
+    static func makeItems(from pasteboard: NSPasteboard) -> [ShelfItem] {
         guard !isInternalShelfDrag(pasteboard) else {
             log.debug("makeItems: ignoring internal Shelf drag")
             return []
@@ -63,7 +63,7 @@ public enum DragItemFactory {
         return []
     }
 
-    public static func makeItems(from providers: [NSItemProvider]) async -> [ShelfItem] {
+    static func makeItems(from providers: [NSItemProvider]) async -> [ShelfItem] {
         guard !containsInternalShelfDrag(providers) else {
             log.debug("makeItems: ignoring internal Shelf provider drag")
             return []
@@ -96,7 +96,7 @@ public enum DragItemFactory {
         return []
     }
 
-    public static func isInternalShelfDrag(_ pasteboard: NSPasteboard) -> Bool {
+    static func isInternalShelfDrag(_ pasteboard: NSPasteboard) -> Bool {
         let advertised = pasteboard.types ?? []
         if advertised.contains(internalShelfDragType) {
             return true
@@ -104,7 +104,7 @@ public enum DragItemFactory {
         return pasteboard.canReadItem(withDataConformingToTypes: [internalShelfDragTypeIdentifier])
     }
 
-    public static func containsInternalShelfDrag(_ providers: [NSItemProvider]) -> Bool {
+    static func containsInternalShelfDrag(_ providers: [NSItemProvider]) -> Bool {
         providers.contains { provider in
             provider.registeredTypeIdentifiers.contains(internalShelfDragTypeIdentifier)
                 || provider.hasItemConformingToTypeIdentifier(internalShelfDragTypeIdentifier)

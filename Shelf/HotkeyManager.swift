@@ -5,7 +5,7 @@ import OSLog
 /// Registers the global show-shelf hotkey (Cmd+Shift+Space); Carbon avoids TCC
 /// prompts. Esc and Space are handled locally by the panel while it is key.
 @MainActor
-public final class HotkeyManager {
+final class HotkeyManager {
     private static let signature: OSType = OSType(0x53484C46)
     private static let showShelfHotKeyID: UInt32 = 1
 
@@ -14,9 +14,9 @@ public final class HotkeyManager {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
-    public var onShowShelf: (() -> Void)?
+    var onShowShelf: (() -> Void)?
 
-    public init() {
+    init() {
         installCarbonEventHandler()
         registerShowShelfHotkey()
     }

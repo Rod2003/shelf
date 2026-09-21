@@ -5,13 +5,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Remove shelf entries only when `promiseAttempted && promiseSucceeded`.
-public struct DragOutResult: Sendable {
-    public let itemID: UUID
-    public let operation: NSDragOperation
-    public let promiseSucceeded: Bool
-    public let promiseAttempted: Bool
+struct DragOutResult: Sendable {
+    let itemID: UUID
+    let operation: NSDragOperation
+    let promiseSucceeded: Bool
+    let promiseAttempted: Bool
 
-    public init(
+    init(
         itemID: UUID,
         operation: NSDragOperation,
         promiseSucceeded: Bool,
@@ -24,17 +24,17 @@ public struct DragOutResult: Sendable {
     }
 }
 
-public struct MultiDragOutResult: Sendable {
-    public let outcomes: [PerItem]
-    public let operation: NSDragOperation
+struct MultiDragOutResult: Sendable {
+    let outcomes: [PerItem]
+    let operation: NSDragOperation
 
-    public struct PerItem: Sendable {
-        public let itemID: UUID
-        public let promiseSucceeded: Bool
-        public let promiseAttempted: Bool
+    struct PerItem: Sendable {
+        let itemID: UUID
+        let promiseSucceeded: Bool
+        let promiseAttempted: Bool
     }
 
-    public init(outcomes: [PerItem], operation: NSDragOperation) {
+    init(outcomes: [PerItem], operation: NSDragOperation) {
         self.outcomes = outcomes
         self.operation = operation
     }
@@ -158,7 +158,7 @@ fileprivate final class MultiPromiseOutcome: @unchecked Sendable {
 }
 
 @MainActor
-public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
+struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
     let item: ShelfItem
     let onTap: (NSEvent.ModifierFlags) -> Void
     let onDragEnded: (DragOutResult) -> Void
@@ -166,7 +166,7 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
     let content: Content
 
-    public init(
+    init(
         item: ShelfItem,
         onTapWithModifiers: @escaping (NSEvent.ModifierFlags) -> Void,
         onDragEnded: @escaping (DragOutResult) -> Void,
@@ -182,7 +182,7 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         self.content = content()
     }
 
-    public func makeNSView(context: Context) -> DragOutCellNSView {
+    func makeNSView(context: Context) -> DragOutCellNSView {
         let view = DragOutCellNSView()
         view.item = item
         view.onTap = onTap
@@ -204,7 +204,7 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         return view
     }
 
-    public func updateNSView(_ nsView: DragOutCellNSView, context: Context) {
+    func updateNSView(_ nsView: DragOutCellNSView, context: Context) {
         nsView.item = item
         nsView.onTap = onTap
         nsView.onDragEnded = onDragEnded
@@ -215,7 +215,7 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
         }
     }
 
-    public func sizeThatFits(
+    func sizeThatFits(
         _ proposal: ProposedViewSize,
         nsView: DragOutCellNSView,
         context: Context
@@ -226,7 +226,7 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
 }
 
 @MainActor
-public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
+final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
     private static let dragThreshold: CGFloat = 4.0
 
@@ -244,9 +244,9 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
     private var dragStartEvent: NSEvent?
     private var didStartDrag: Bool = false
 
-    public override var mouseDownCanMoveWindow: Bool { false }
+    override var mouseDownCanMoveWindow: Bool { false }
 
-    public override func hitTest(_ point: NSPoint) -> NSView? {
+    override func hitTest(_ point: NSPoint) -> NSView? {
         switch NSApp.currentEvent?.type {
         case .leftMouseDown, .leftMouseDragged, .leftMouseUp:
             return bounds.contains(point) ? self : nil
@@ -255,7 +255,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         }
     }
 
-    public override var intrinsicContentSize: NSSize {
+    override var intrinsicContentSize: NSSize {
         guard let hosting = hostingView else { return super.intrinsicContentSize }
         let size = hosting.intrinsicContentSize
         if size.width >= 0 && size.height >= 0 {
@@ -264,13 +264,13 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return hosting.fittingSize
     }
 
-    public override func mouseDown(with event: NSEvent) {
+    override func mouseDown(with event: NSEvent) {
         dragStartPoint = event.locationInWindow
         dragStartEvent = event
         didStartDrag = false
     }
 
-    public override func mouseDragged(with event: NSEvent) {
+    override func mouseDragged(with event: NSEvent) {
         guard let start = dragStartPoint, !didStartDrag else { return }
         let dx = event.locationInWindow.x - start.x
         let dy = event.locationInWindow.y - start.y
@@ -280,7 +280,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         }
     }
 
-    public override func mouseUp(with event: NSEvent) {
+    override func mouseUp(with event: NSEvent) {
         defer {
             dragStartPoint = nil
             dragStartEvent = nil
@@ -445,7 +445,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return UTType(filenameExtension: ext)?.identifier ?? UTType.data.identifier
     }
 
-    public func draggingSession(
+    func draggingSession(
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
@@ -459,7 +459,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         }
     }
 
-    public func draggingSession(
+    func draggingSession(
         _ session: NSDraggingSession,
         endedAt screenPoint: NSPoint,
         operation: NSDragOperation
@@ -494,7 +494,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         ))
     }
 
-    nonisolated public func filePromiseProvider(
+    nonisolated func filePromiseProvider(
         _ filePromiseProvider: NSFilePromiseProvider,
         fileNameForType fileType: String
     ) -> String {
@@ -510,7 +510,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return "Untitled"
     }
 
-    nonisolated public func operationQueue(for filePromiseProvider: NSFilePromiseProvider) -> OperationQueue {
+    nonisolated func operationQueue(for filePromiseProvider: NSFilePromiseProvider) -> OperationQueue {
         if let info = filePromiseProvider.userInfo as? [String: Any],
            info["itemID"] is String {
             return multiPromiseOutcome.queue
@@ -518,7 +518,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return promiseOutcome.queue
     }
 
-    nonisolated public func filePromiseProvider(
+    nonisolated func filePromiseProvider(
         _ filePromiseProvider: NSFilePromiseProvider,
         writePromiseTo url: URL,
         completionHandler: @escaping (Error?) -> Void

@@ -3,14 +3,14 @@ import OSLog
 import ShelfCore
 
 @MainActor
-public final class ShelfWindowManager {
+final class ShelfWindowManager {
     private var controller: ShelfWindowController?
     private var screenObserver: NSObjectProtocol?
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 
-    public var onShelfClosed: (() -> Void)?
+    var onShelfClosed: (() -> Void)?
 
-    public init() {
+    init() {
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -28,11 +28,11 @@ public final class ShelfWindowManager {
         }
     }
 
-    public var isVisible: Bool { controller != nil }
+    var isVisible: Bool { controller != nil }
 
-    public var isKey: Bool { controller?.panel.isKeyWindow == true }
+    var isKey: Bool { controller?.panel.isKeyWindow == true }
 
-    public func openShelf(
+    func openShelf(
         _ shelfID: UUID,
         contentView: NSView,
         baseOrigin: CGPoint
@@ -55,19 +55,19 @@ public final class ShelfWindowManager {
         log.info("Opened shelf panel id=\(shelfID.uuidString, privacy: .public)")
     }
 
-    public func closeShelf() {
+    func closeShelf() {
         controller?.close()
     }
 
-    public func focusShelf() {
+    func focusShelf() {
         controller?.show()
     }
 
-    public func shelfController() -> ShelfWindowController? {
+    func shelfController() -> ShelfWindowController? {
         controller
     }
 
-    public func repositionIfOffScreen(
+    func repositionIfOffScreen(
         screens: [PanelPositioner.Screen]? = nil
     ) {
         let resolvedScreens = screens ?? PanelPositioner.liveScreens()

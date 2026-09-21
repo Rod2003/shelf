@@ -5,63 +5,63 @@ import QuickLookUI
 import ShelfCore
 
 @MainActor
-public final class ShelfKeyHandlingPanel: NSPanel {
+final class ShelfKeyHandlingPanel: NSPanel {
     /// Return true to consume; false to let the responder chain handle it.
-    public var onKeyDown: ((NSEvent) -> Bool)?
-    public var onKeyUp: ((NSEvent) -> Bool)?
-    public weak var quickLookPanelHost: QuickLookPanelHosting?
+    var onKeyDown: ((NSEvent) -> Bool)?
+    var onKeyUp: ((NSEvent) -> Bool)?
+    weak var quickLookPanelHost: QuickLookPanelHosting?
 
-    public override var canBecomeKey: Bool { true }
-    public override var canBecomeMain: Bool { false }
-    public override var acceptsFirstResponder: Bool { true }
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    override var acceptsFirstResponder: Bool { true }
 
-    public override func keyDown(with event: NSEvent) {
+    override func keyDown(with event: NSEvent) {
         if onKeyDown?(event) == true { return }
         super.keyDown(with: event)
     }
 
-    public override func keyUp(with event: NSEvent) {
+    override func keyUp(with event: NSEvent) {
         if onKeyUp?(event) == true { return }
         super.keyUp(with: event)
     }
 
-    public override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
         quickLookPanelHost?.acceptsPreviewPanelControl() ?? false
     }
 
-    public override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
         quickLookPanelHost?.beginPreviewPanelControl()
     }
 
-    public override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
         quickLookPanelHost?.endPreviewPanelControl()
     }
 }
 
 @MainActor
-public final class ShelfWindowController: NSObject, NSWindowDelegate {
-    public let shelfID: UUID
-    public let panel: ShelfKeyHandlingPanel
-    public var onDidClose: (() -> Void)?
+final class ShelfWindowController: NSObject, NSWindowDelegate {
+    let shelfID: UUID
+    let panel: ShelfKeyHandlingPanel
+    var onDidClose: (() -> Void)?
 
-    public var onKeyDown: ((NSEvent) -> Bool)? {
+    var onKeyDown: ((NSEvent) -> Bool)? {
         get { panel.onKeyDown }
         set { panel.onKeyDown = newValue }
     }
 
-    public var onKeyUp: ((NSEvent) -> Bool)? {
+    var onKeyUp: ((NSEvent) -> Bool)? {
         get { panel.onKeyUp }
         set { panel.onKeyUp = newValue }
     }
 
-    public var quickLookPanelHost: QuickLookPanelHosting? {
+    var quickLookPanelHost: QuickLookPanelHosting? {
         get { panel.quickLookPanelHost }
         set { panel.quickLookPanelHost = newValue }
     }
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 
-    public init(
+    init(
         shelfID: UUID,
         contentView: NSView,
         atOrigin: CGPoint,
@@ -103,13 +103,13 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
     }
 
-    public func show() {
+    func show() {
         panel.orderFrontRegardless()
         panel.makeKey()
         log.info("Shelf panel shown id=\(self.shelfID.uuidString, privacy: .public)")
     }
 
-    public func close() {
+    func close() {
         panel.close()
         log.info("Shelf panel close requested id=\(self.shelfID.uuidString, privacy: .public)")
     }
@@ -122,7 +122,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         layer.masksToBounds = true
     }
 
-    public func setFrameSize(
+    func setFrameSize(
         _ targetSize: CGSize,
         animated: Bool,
         duration: TimeInterval = 0.32,
@@ -179,7 +179,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         return frame
     }
 
-    nonisolated public func windowWillClose(_ notification: Notification) {
+    nonisolated func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
             self.onDidClose?()
         }

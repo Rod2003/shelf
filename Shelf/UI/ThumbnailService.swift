@@ -2,15 +2,15 @@ import AppKit
 import ShelfCore
 import QuickLookThumbnailing
 import OSLog
-public actor ThumbnailService {
+actor ThumbnailService {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
     private var cache: [String: NSImage] = [:]
     private let maxCacheCount: Int
 
-    public init(maxCacheCount: Int = 200) {
+    init(maxCacheCount: Int = 200) {
         self.maxCacheCount = maxCacheCount
     }
-    public func thumbnail(
+    func thumbnail(
         for url: URL,
         size: CGSize = CGSize(width: 96, height: 96),
         scale: CGFloat = 2
@@ -35,7 +35,7 @@ public actor ThumbnailService {
         }
     }
 
-    public func thumbnail(
+    func thumbnail(
         for item: ShelfItem,
         resolver: BookmarkResolver?,
         size: CGSize = CGSize(width: 96, height: 96),
@@ -65,7 +65,7 @@ public actor ThumbnailService {
         return image
     }
 
-    public nonisolated static func sourceImageIfAvailable(for url: URL) -> NSImage? {
+    nonisolated static func sourceImageIfAvailable(for url: URL) -> NSImage? {
         guard
             let image = NSImage(contentsOf: url),
             image.size.width > 0,

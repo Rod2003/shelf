@@ -1,10 +1,9 @@
 import AppKit
-import Foundation
 import OSLog
 import ShelfCore
 
 @MainActor
-public final class ShakeDetector {
+final class ShakeDetector {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
     private let dragPasteboard: NSPasteboard
     private let pressedMouseButtons: () -> Int
@@ -14,16 +13,16 @@ public final class ShakeDetector {
     private var dragActiveSince: Date?
     private var heuristic: ShakeHeuristic
 
-    public static let idlePollSec: TimeInterval = 0.20
-    public static let activePollSec: TimeInterval = 1.0 / 60.0
+    static let idlePollSec: TimeInterval = 0.20
+    static let activePollSec: TimeInterval = 1.0 / 60.0
 
-    public var onShakeDuringDrag: ((CGPoint) -> Void)?
+    var onShakeDuringDrag: ((CGPoint) -> Void)?
 
     var isHighFreqSamplingActive: Bool {
         dragActiveSince != nil
     }
 
-    public init(
+    init(
         config: ShakeHeuristic.Config = .standard,
         dragPasteboard: NSPasteboard = NSPasteboard(name: .drag),
         pressedMouseButtons: @escaping @autoclosure () -> Int = NSEvent.pressedMouseButtons
@@ -34,7 +33,7 @@ public final class ShakeDetector {
         self.heuristic = ShakeHeuristic(config: config)
     }
 
-    public func start() {
+    func start() {
         guard lowFreqTimer == nil else { return }
         lastDragChangeCount = dragPasteboard.changeCount
         lowFreqTimer = Timer.scheduledTimer(
@@ -48,7 +47,7 @@ public final class ShakeDetector {
         log.info("ShakeDetector started (5Hz drag poll)")
     }
 
-    public func stop() {
+    func stop() {
         lowFreqTimer?.invalidate()
         lowFreqTimer = nil
         endHighFreqSampling()
