@@ -107,10 +107,10 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
     }
 
-    public func show(wantsKey: Bool = true) {
+    public func show() {
         panel.orderFrontRegardless()
         panel.makeKey()
-        log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public) wantsKey=\(wantsKey, privacy: .public)")
+        log.info("Shelf panel shown id=\(self.shelfID.rawValue.uuidString, privacy: .public)")
     }
 
     public func close() {
@@ -124,10 +124,6 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
         layer.cornerRadius = ShelfGlass.panelCornerRadius
         layer.cornerCurve = .continuous
         layer.masksToBounds = true
-    }
-
-    public func setFrameWidth(_ targetWidth: CGFloat, animated: Bool) {
-        setFrameSize(CGSize(width: targetWidth, height: panel.frame.height), animated: animated)
     }
 
     public func setFrameSize(

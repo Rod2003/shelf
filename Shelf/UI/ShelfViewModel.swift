@@ -197,19 +197,6 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func removeAll(itemIDs: Set<ItemID>) {
-        guard !itemIDs.isEmpty else { return }
-        items.removeAll { itemIDs.contains($0.id) }
-        selectionState.isCollapsedStackSelected = selectionState.isCollapsedStackSelected && !items.isEmpty
-        selectionState.expanded.itemIDs.subtract(itemIDs)
-        for itemID in itemIDs {
-            quickLookSourceFrames.removeValue(forKey: itemID)
-        }
-        if let active = selectionState.expanded.activeItemID, itemIDs.contains(active) {
-            selectionState.expanded.activeItemID = selectionState.expanded.itemIDs.first
-        }
-    }
-
     public func selectOnly(_ itemID: ItemID) {
         selectionState.expanded.itemIDs = [itemID]
         selectionState.expanded.activeItemID = itemID
@@ -272,12 +259,5 @@ public final class ShelfViewModel: ObservableObject {
         if nextFrames != quickLookSourceFrames {
             quickLookSourceFrames = nextFrames
         }
-    }
-
-    public func reorder(from source: Int, to destination: Int) {
-        guard items.indices.contains(source), destination >= 0, destination <= items.count else { return }
-        let item = items.remove(at: source)
-        let dest = destination > source ? destination - 1 : destination
-        items.insert(item, at: dest)
     }
 }
