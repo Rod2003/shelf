@@ -57,7 +57,7 @@ public final class AppCoordinator {
         }
         quickLook.onDidClose = { [weak self] in
             self?.log.info("Quick Look did close; restoring shelf focus")
-            self?.windowManager.focusShelf(wantsKey: true)
+            self?.windowManager.focusShelf()
         }
         quickLook.onOpenRequested = { [weak self] in
             self?.openQuickLookForKeyShelf()
@@ -71,7 +71,7 @@ public final class AppCoordinator {
             self?.showShelfAtCursor()
         }
         menuBar.onFocusShelf = { [weak self] in
-            self?.windowManager.focusShelf(wantsKey: true)
+            self?.windowManager.focusShelf()
         }
         menuBar.onAbout = { [weak self] in
             self?.showAboutPanel()
@@ -143,8 +143,7 @@ public final class AppCoordinator {
         windowManager.openShelf(
             shelf.id,
             contentView: hosting,
-            baseOrigin: base,
-            wantsKey: true
+            baseOrigin: base
         )
         wireWindowAnimation(viewModel)
         wireKeyHandling(viewModel)

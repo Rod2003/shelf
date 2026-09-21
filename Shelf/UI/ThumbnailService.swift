@@ -59,10 +59,6 @@ public actor ThumbnailService {
         }
     }
 
-    public func clearCache() {
-        cache.removeAll()
-    }
-
     private func storeCachedThumbnail(_ image: NSImage, forKey key: String) -> NSImage {
         if cache.count >= maxCacheCount { cache.removeAll() }
         cache[key] = image

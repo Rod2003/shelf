@@ -461,11 +461,6 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         return UTType(filenameExtension: ext)?.identifier ?? UTType.data.identifier
     }
 
-    nonisolated private static func suggestedBaseName(from name: String) -> String {
-        let stripped = (name as NSString).deletingPathExtension
-        return stripped.isEmpty ? name : stripped
-    }
-
     public func draggingSession(
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext

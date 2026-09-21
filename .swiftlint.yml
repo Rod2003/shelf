@@ -8,9 +8,6 @@ disabled_rules:
   - todo
   - trailing_comma
   - line_length
-  # Project consciously keeps a no-op override on ShelfApplication.sendEvent
-  # as a forward-flexibility hook for future drag detection.
-  - unneeded_override
   # Several helpers (e.g. FilePromiseProviderWithURL, PromiseOutcome) are
   # intentionally fileprivate to scope them to their owning drag-out file.
   - private_over_fileprivate

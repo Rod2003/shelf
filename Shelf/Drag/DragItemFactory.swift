@@ -12,16 +12,6 @@ private enum ShelfDragLog {
 public enum DragItemFactory {
     private static let log = ShelfDragLog.logger
 
-    private static let maxDisplayNameLength: Int = 80
-    public static let acceptedPasteboardTypes: [NSPasteboard.PasteboardType] = [
-        .fileURL,
-        .URL,
-        .png,
-        .tiff,
-        .fileContents,
-        NSPasteboard.PasteboardType("public.image"),
-        .string
-    ]
     public static let acceptedContentTypes: [UTType] = [
         .fileURL,
         .url,
