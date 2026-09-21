@@ -29,7 +29,7 @@ public final class AppCoordinator {
         self.thumbnailService = ThumbnailService()
         self.shelfStore = defaultsBackend.makeShelfStore()
         self.hotkeyManager = HotkeyManager()
-        self.shakeDetector = ShakeDetector(config: .defaultMedium)
+        self.shakeDetector = ShakeDetector()
         self.menuBar = MenuBarController()
         self.windowManager = ShelfWindowManager()
         self.quickLook = QuickLookCoordinator(resolver: bookmarkResolver)

@@ -20,31 +20,12 @@ public struct ShakeHeuristic {
             self.minDurationSec = minDurationSec
         }
 
-        public static let defaultLow = Config(
-            minDeltaPx: 8.0,
-            minReversals: 6,
-            timeWindowSec: 0.5,
-            minDurationSec: 0.30
-        )
-
-        public static let defaultMedium = Config(
+        public static let standard = Config(
             minDeltaPx: 4.0,
             minReversals: 4,
             timeWindowSec: 0.6,
             minDurationSec: 0.25
         )
-
-        public static let defaultHigh = Config(
-            minDeltaPx: 3.0,
-            minReversals: 3,
-            timeWindowSec: 0.7,
-            minDurationSec: 0.18
-        )
-    }
-
-    public enum Event: Equatable, Sendable {
-        case none
-        case shake
     }
 
     private struct Sample {
@@ -55,11 +36,11 @@ public struct ShakeHeuristic {
     public let config: Config
     private var window: [Sample] = []
 
-    public init(config: Config = .defaultMedium) {
+    public init(config: Config = .standard) {
         self.config = config
     }
 
-    public mutating func ingest(timestamp: TimeInterval, position: CGPoint) -> Event {
+    public mutating func ingest(timestamp: TimeInterval, position: CGPoint) -> Bool {
         window.append(Sample(timestamp: timestamp, x: Double(position.x)))
 
         while window.count > 1,
@@ -70,7 +51,7 @@ public struct ShakeHeuristic {
 
         guard let first = window.first,
               let last = window.last,
-              window.count >= 2 else { return .none }
+              window.count >= 2 else { return false }
 
         var reversals = 0
         var lastSign = 0
@@ -88,9 +69,9 @@ public struct ShakeHeuristic {
         if reversals >= config.minReversals,
            duration >= config.minDurationSec {
             window.removeAll(keepingCapacity: true)
-            return .shake
+            return true
         }
-        return .none
+        return false
     }
 
     public mutating func reset() {
