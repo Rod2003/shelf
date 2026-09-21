@@ -5,7 +5,6 @@ public struct ShelfItemView: View {
     public let isSelected: Bool
     public let resolver: BookmarkResolver?
     public let thumbnailService: ThumbnailService?
-    public let thumbnailNamespace: Namespace.ID?
     public let showsDisplayName: Bool
 
     @State private var thumbnail: NSImage?
@@ -17,14 +16,12 @@ public struct ShelfItemView: View {
         isSelected: Bool = false,
         resolver: BookmarkResolver? = nil,
         thumbnailService: ThumbnailService? = nil,
-        thumbnailNamespace: Namespace.ID? = nil,
         showsDisplayName: Bool = true
     ) {
         self.item = item
         self.isSelected = isSelected
         self.resolver = resolver
         self.thumbnailService = thumbnailService
-        self.thumbnailNamespace = thumbnailNamespace
         self.showsDisplayName = showsDisplayName
     }
 
@@ -57,7 +54,7 @@ public struct ShelfItemView: View {
 
     @ViewBuilder
     private var thumbnailContainer: some View {
-        let content = ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             thumbnailView
                 .frame(width: 64, height: 64)
             if isMissing {
@@ -68,17 +65,6 @@ public struct ShelfItemView: View {
             }
         }
         .frame(width: 64, height: 64)
-
-        if let thumbnailNamespace {
-            content
-                .matchedGeometryEffect(
-                    id: item.id,
-                    in: thumbnailNamespace,
-                    isSource: false
-                )
-        } else {
-            content
-        }
     }
 
     @ViewBuilder
