@@ -1,5 +1,4 @@
 import AppKit
-import CryptoKit
 import OSLog
 import ShelfCore
 import SwiftUI
@@ -266,14 +265,13 @@ public final class AppCoordinator {
     }
 
     private func uniqueItemsForAppend(_ items: [ShelfItem], existingItems: [ShelfItem]) -> [ShelfItem] {
-        var knownKeys = Set(existingItems.flatMap(duplicateKeys(for:)))
+        var knownKeys = Set(existingItems.compactMap(duplicateKey(for:)))
         var uniqueItems: [ShelfItem] = []
 
         for item in items {
-            let keys = duplicateKeys(for: item)
-            if !keys.isEmpty {
-                guard keys.isDisjoint(with: knownKeys) else { continue }
-                knownKeys.formUnion(keys)
+            if let key = duplicateKey(for: item) {
+                guard !knownKeys.contains(key) else { continue }
+                knownKeys.insert(key)
             }
             uniqueItems.append(item)
         }
@@ -424,7 +422,12 @@ public final class AppCoordinator {
             return
         }
 
-        let isConfirmedMove = isDragOutConfirmed(item: item, result: result)
+        let isConfirmedMove = isDragOutConfirmed(
+            item: item,
+            operation: result.operation,
+            promiseAttempted: result.promiseAttempted,
+            promiseSucceeded: result.promiseSucceeded
+        )
 
         if isConfirmedMove {
             deleteOriginalFile(for: item)
@@ -461,7 +464,12 @@ public final class AppCoordinator {
 
         let confirmedIDs = Set(result.outcomes.compactMap { outcome -> UUID? in
             guard let item = shelf.items.first(where: { $0.id == outcome.itemID }) else { return nil }
-            return isMultiDragOutConfirmed(item: item, outcome: outcome, operation: result.operation)
+            return isDragOutConfirmed(
+                item: item,
+                operation: result.operation,
+                promiseAttempted: outcome.promiseAttempted,
+                promiseSucceeded: outcome.promiseSucceeded
+            )
                 ? outcome.itemID
                 : nil
         })
@@ -548,70 +556,48 @@ public final class AppCoordinator {
 
 private extension AppCoordinator {
     /// File and image drags use file promises; links and text use direct pasteboard data.
-    func isDragOutConfirmed(item: ShelfItem, result: DragOutResult) -> Bool {
-        switch item.kind {
-        case .webURL, .text:
-            return !result.operation.isEmpty
-        case .fileBookmark, .clipboardImage:
-            return result.promiseAttempted && result.promiseSucceeded
-        }
-    }
-
-    func isMultiDragOutConfirmed(
+    func isDragOutConfirmed(
         item: ShelfItem,
-        outcome: MultiDragOutResult.PerItem,
-        operation: NSDragOperation
+        operation: NSDragOperation,
+        promiseAttempted: Bool,
+        promiseSucceeded: Bool
     ) -> Bool {
         switch item.kind {
         case .webURL, .text:
             return !operation.isEmpty
         case .fileBookmark, .clipboardImage:
-            return outcome.promiseAttempted && outcome.promiseSucceeded
+            return promiseAttempted && promiseSucceeded
         }
     }
 
-    func duplicateKeys(for item: ShelfItem) -> Set<String> {
+    func duplicateKey(for item: ShelfItem) -> String? {
         switch item.kind {
         case .fileBookmark(let record):
-            return fileBookmarkDuplicateKeys(record)
+            return fileBookmarkDuplicateKey(record)
         case .clipboardImage(let filename):
-            guard let url = DefaultsBackend.clipboardImageURL(filename: filename) else { return [] }
-            return fileDuplicateKeys(for: url)
+            guard let url = DefaultsBackend.clipboardImageURL(filename: filename) else { return nil }
+            return normalizedFilePath(url)
         case .webURL, .text:
-            return []
+            return nil
         }
     }
 
-    func fileBookmarkDuplicateKeys(_ record: BookmarkRecord) -> Set<String> {
+    func fileBookmarkDuplicateKey(_ record: BookmarkRecord) -> String? {
         if !record.originalPath.isEmpty {
-            return fileDuplicateKeys(for: URL(fileURLWithPath: record.originalPath))
+            return normalizedFilePath(URL(fileURLWithPath: record.originalPath))
         }
 
         do {
             let resolution = try bookmarkResolver.resolve(record)
             defer { bookmarkResolver.release(resolution.url) }
-            return fileDuplicateKeys(for: resolution.url)
+            return normalizedFilePath(resolution.url)
         } catch {
             log.warning("Could not resolve bookmark while checking duplicates: \(String(describing: error), privacy: .public)")
-            return []
+            return nil
         }
-    }
-
-    func fileDuplicateKeys(for url: URL) -> Set<String> {
-        var keys: Set<String> = ["path:\(normalizedFilePath(url))"]
-        if let hash = fileContentHash(for: url) {
-            keys.insert("sha256:\(hash)")
-        }
-        return keys
     }
 
     func normalizedFilePath(_ url: URL) -> String {
         url.standardizedFileURL.resolvingSymlinksInPath().path
-    }
-
-    func fileContentHash(for url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
