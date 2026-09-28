@@ -30,7 +30,6 @@ private struct ShelfSelectionState: Equatable {
 @MainActor
 public final class ShelfViewModel: ObservableObject {
     public let shelfID: ShelfGroupID
-    @Published public var name: String
     @Published public var items: [ShelfItem]
     @Published public var isExpanded: Bool
     @Published public private(set) var showsCollapsedPill: Bool
@@ -58,7 +57,6 @@ public final class ShelfViewModel: ObservableObject {
 
     public init(shelf: ShelfGroup) {
         self.shelfID = shelf.id
-        self.name = shelf.name
         self.items = shelf.items
         self.isExpanded = false
         self.showsCollapsedPill = true
@@ -176,7 +174,6 @@ public final class ShelfViewModel: ObservableObject {
     }
 
     public func reload(from shelf: ShelfGroup) {
-        self.name = shelf.name
         self.items = shelf.items
         let liveIDs = Set(shelf.items.map(\.id))
         selectionState.isCollapsedStackSelected = selectionState.isCollapsedStackSelected && !shelf.items.isEmpty

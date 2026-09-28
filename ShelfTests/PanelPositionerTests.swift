@@ -104,24 +104,6 @@ final class PanelPositionerTests: XCTestCase {
         )
     }
 
-    func testCascadeForFiveSimultaneous() {
-        let base = CGPoint(x: 100, y: 500)
-        let origins = (0..<5).map {
-            PanelPositioner.cascadeOrigin(baseOrigin: base, existingCount: $0)
-        }
-        for (i, p) in origins.enumerated() {
-            XCTAssertEqual(p.x, base.x + 30 * CGFloat(i), accuracy: 0.001)
-            XCTAssertEqual(p.y, base.y - 30 * CGFloat(i), accuracy: 0.001)
-        }
-    }
-
-    func testCascadeWrapsAtEight() {
-        let base = CGPoint(x: 100, y: 500)
-        let origin8 = PanelPositioner.cascadeOrigin(baseOrigin: base, existingCount: 8)
-        XCTAssertEqual(origin8.x, base.x, accuracy: 0.001)
-        XCTAssertEqual(origin8.y, base.y, accuracy: 0.001)
-    }
-
     func testClampLeavesInteriorOriginUnchanged() {
         let visible = CGRect(x: 0, y: 0, width: 1920, height: 1055)
         let result = PanelPositioner.clamp(

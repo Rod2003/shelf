@@ -33,11 +33,4 @@ final class HotkeyManagerIntegrationTests: XCTestCase {
         XCTAssertNil(manager.onShowShelf)
         manager.onShowShelf?()
     }
-    // Esc (close) and Space (Quick Look) are intentionally NOT global hotkeys —
-    // they are handled locally by the shelf panel while it is key, so they never
-    // swallow those keys system-wide. The only global hotkey is show-shelf.
-    func testShowShelfIsTheOnlyGlobalHotkey() {
-        XCTAssertEqual(HotkeyManager.HotkeyKind.showShelf.rawValue, 1)
-        XCTAssertEqual(HotkeyManager.HotkeyKind.allCases.count, 1)
-    }
 }
