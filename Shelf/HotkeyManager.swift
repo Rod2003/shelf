@@ -3,36 +3,29 @@ import Carbon.HIToolbox
 import OSLog
 
 /// Registers the global show-shelf hotkey (Cmd+Shift+Space); Carbon avoids TCC
-/// prompts. Per-shelf keys (Esc to close, Space for Quick Look) are handled
-/// locally by the panel while it is key — never as system-wide hotkeys, which
-/// would swallow those keys across every app.
+/// prompts. Esc and Space are handled locally by the panel while it is key.
 @MainActor
 public final class HotkeyManager {
-    public enum HotkeyKind: UInt32, CaseIterable {
-        case showShelf = 1
-    }
-
     private static let signature: OSType = OSType(0x53484C46)
+    private static let showShelfHotKeyID: UInt32 = 1
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "hotkey")
 
-    private var registrations: [HotkeyKind: EventHotKeyRef] = [:]
-
+    private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     public var onShowShelf: (() -> Void)?
 
     public init() {
         installCarbonEventHandler()
-        register(.showShelf)
+        registerShowShelfHotkey()
     }
 
     deinit {
         // Do not call @MainActor helpers from deinit; unregister Carbon refs directly.
-        for (_, ref) in registrations {
-            UnregisterEventHotKey(ref)
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
         }
-        registrations.removeAll()
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
         }
@@ -83,44 +76,32 @@ public final class HotkeyManager {
         }
     }
 
-    private func register(_ kind: HotkeyKind) {
-        guard registrations[kind] == nil else {
-            return
-        }
-        let (keyCode, modifiers): (UInt32, UInt32) = {
-            switch kind {
-            case .showShelf: return (UInt32(kVK_Space), UInt32(cmdKey | shiftKey))
-            }
-        }()
-        let id = EventHotKeyID(signature: HotkeyManager.signature, id: kind.rawValue)
+    private func registerShowShelfHotkey() {
+        guard hotKeyRef == nil else { return }
+        let id = EventHotKeyID(signature: HotkeyManager.signature, id: Self.showShelfHotKeyID)
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(
-            keyCode,
-            modifiers,
+            UInt32(kVK_Space),
+            UInt32(cmdKey | shiftKey),
             id,
             GetApplicationEventTarget(),
             0,
             &ref
         )
-        guard status == noErr, let ref = ref else {
-            log.error(
-                "RegisterEventHotKey failed kind=\(kind.rawValue, privacy: .public) status=\(status, privacy: .public)"
-            )
+        guard status == noErr, let ref else {
+            log.error("RegisterEventHotKey failed status=\(status, privacy: .public)")
             return
         }
-        registrations[kind] = ref
-        log.info("Registered hotkey kind=\(kind.rawValue, privacy: .public)")
+        hotKeyRef = ref
+        log.info("Registered show-shelf hotkey")
     }
 
     private func dispatch(id: UInt32) {
-        guard let kind = HotkeyKind(rawValue: id) else {
+        guard id == Self.showShelfHotKeyID else {
             log.error("Hotkey fired with unknown id=\(id, privacy: .public)")
             return
         }
-        switch kind {
-        case .showShelf:
-            log.info("showShelf hotkey fired")
-            onShowShelf?()
-        }
+        log.info("showShelf hotkey fired")
+        onShowShelf?()
     }
 }
