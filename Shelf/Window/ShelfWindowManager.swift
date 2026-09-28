@@ -3,27 +3,34 @@ import OSLog
 import ShelfCore
 
 @MainActor
-public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
+public final class ShelfWindowManager {
     private var controller: ShelfWindowController?
+    private var screenObserver: NSObjectProtocol?
     private let log = Logger(subsystem: "dev.rod.shelf", category: "panel")
 
     public var onShelfClosed: (() -> Void)?
 
-    public override init() {
-        super.init()
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleScreenChange),
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil
-        )
+    public init() {
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.handleScreenChange()
+            }
+        }
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        if let screenObserver {
+            NotificationCenter.default.removeObserver(screenObserver)
+        }
     }
 
-    public var visibleShelfCount: Int { controller == nil ? 0 : 1 }
+    public var isVisible: Bool { controller != nil }
+
+    public var isKey: Bool { controller?.panel.isKeyWindow == true }
 
     public func openShelf(
         _ shelfID: ShelfGroupID,
@@ -40,7 +47,9 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
             contentView: contentView,
             atOrigin: baseOrigin
         )
-        controller.delegate = self
+        controller.onDidClose = { [weak self] in
+            self?.handleClosed()
+        }
         self.controller = controller
         controller.show()
         log.info("Opened shelf panel id=\(shelfID.rawValue.uuidString, privacy: .public)")
@@ -48,14 +57,6 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
 
     public func closeShelf() {
         controller?.close()
-    }
-
-    public func closeAll() {
-        controller?.close()
-    }
-
-    public func isShelfKey() -> Bool {
-        controller?.panel.isKeyWindow == true
     }
 
     public func focusShelf() {
@@ -66,12 +67,12 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
         controller
     }
 
-    public func repositionPanelsForScreenChange(
+    public func repositionIfOffScreen(
         screens: [PanelPositioner.Screen]? = nil
     ) {
         let resolvedScreens = screens ?? PanelPositioner.liveScreens()
         guard let targetScreen = resolvedScreens.first else {
-            log.error("repositionPanelsForScreenChange called with empty screens; skipping")
+            log.error("repositionIfOffScreen called with empty screens; skipping")
             return
         }
         guard let controller else { return }
@@ -92,14 +93,15 @@ public final class ShelfWindowManager: NSObject, ShelfWindowControllerDelegate {
         log.info("Repositioned shelf id=\(controller.shelfID.rawValue.uuidString, privacy: .public) to (\(clamped.x, privacy: .public), \(clamped.y, privacy: .public))")
     }
 
-    @objc private func handleScreenChange() {
-        log.info("Screen parameters changed; repositioning panels")
-        repositionPanelsForScreenChange()
+    private func handleScreenChange() {
+        log.info("Screen parameters changed; repositioning panel")
+        repositionIfOffScreen()
     }
 
-    public func shelfWindowDidClose(_ controller: ShelfWindowController) {
-        self.controller = nil
-        log.info("Shelf panel released id=\(controller.shelfID.rawValue.uuidString, privacy: .public)")
+    private func handleClosed() {
+        guard let closed = controller else { return }
+        controller = nil
+        log.info("Shelf panel released id=\(closed.shelfID.rawValue.uuidString, privacy: .public)")
         onShelfClosed?()
     }
 }
