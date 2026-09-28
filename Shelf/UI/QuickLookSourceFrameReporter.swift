@@ -4,8 +4,8 @@ import SwiftUI
 
 extension View {
     func quickLookSourceFrame(
-        ids: [ItemID],
-        onChange: @escaping ([ItemID], CGRect?) -> Void
+        ids: [UUID],
+        onChange: @escaping ([UUID], CGRect?) -> Void
     ) -> some View {
         background(
             QuickLookSourceFrameReporter(itemIDs: ids, onChange: onChange)
@@ -14,8 +14,8 @@ extension View {
 }
 
 private struct QuickLookSourceFrameReporter: NSViewRepresentable {
-    let itemIDs: [ItemID]
-    let onChange: ([ItemID], CGRect?) -> Void
+    let itemIDs: [UUID]
+    let onChange: ([UUID], CGRect?) -> Void
 
     func makeNSView(context: Context) -> QuickLookSourceFrameReportingView {
         let view = QuickLookSourceFrameReportingView()
@@ -41,8 +41,8 @@ private struct QuickLookSourceFrameReporter: NSViewRepresentable {
 
 @MainActor
 private final class QuickLookSourceFrameReportingView: NSView {
-    var itemIDs: [ItemID] = []
-    var onChange: (([ItemID], CGRect?) -> Void)?
+    var itemIDs: [UUID] = []
+    var onChange: (([UUID], CGRect?) -> Void)?
     private var lastReportedFrame: CGRect?
     private var reportScheduled = false
     private var observers: [NSObjectProtocol] = []

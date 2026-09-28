@@ -25,7 +25,7 @@ final class ShelfStoreTests: XCTestCase {
         lastUsedAt: Date? = nil
     ) -> ShelfGroup {
         ShelfGroup(
-            id: ShelfGroupID(rawValue: UUID()),
+            id: UUID(),
             name: name,
             items: items,
             createdAt: createdAt,
@@ -35,7 +35,7 @@ final class ShelfStoreTests: XCTestCase {
 
     private func makeBookmarkItem() -> ShelfItem {
         ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .fileBookmark(BookmarkRecord(
                 bookmarkData: Data([0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02]),
                 originalPath: "/Users/test/file.pdf",
@@ -48,7 +48,7 @@ final class ShelfStoreTests: XCTestCase {
 
     private func makeWebURLItem() -> ShelfItem {
         ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .webURL(URL(string: "https://example.com/path?q=1")!),
             displayName: "Example",
             createdAt: Date(timeIntervalSince1970: 1_700_000_010)
@@ -57,7 +57,7 @@ final class ShelfStoreTests: XCTestCase {
 
     private func makeTextItem() -> ShelfItem {
         ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .text("snippet"),
             displayName: "Snippet",
             createdAt: Date(timeIntervalSince1970: 1_700_000_020)
@@ -66,7 +66,7 @@ final class ShelfStoreTests: XCTestCase {
 
     private func makeClipboardImageItem() -> ShelfItem {
         ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .clipboardImage(filename: "img.png"),
             displayName: "Clipboard image",
             createdAt: Date(timeIntervalSince1970: 1_700_000_030)
@@ -226,11 +226,11 @@ final class ShelfStoreTests: XCTestCase {
         )
         env.defaults.set(
             try JSONEncoder().encode(older),
-            forKey: "\(prefix).shelf.\(older.id.rawValue.uuidString)"
+            forKey: "\(prefix).shelf.\(older.id.uuidString)"
         )
         env.defaults.set(
             try JSONEncoder().encode(newer),
-            forKey: "\(prefix).shelf.\(newer.id.rawValue.uuidString)"
+            forKey: "\(prefix).shelf.\(newer.id.uuidString)"
         )
 
         let store = ShelfStore(backend: .userDefaults(env.defaults, keyPrefix: prefix))
@@ -238,8 +238,33 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(store.current(), newer)
         XCTAssertNotNil(env.defaults.data(forKey: "\(prefix).shelf"))
         XCTAssertNil(env.defaults.data(forKey: "\(prefix).index"))
-        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(older.id.rawValue.uuidString)"))
-        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(newer.id.rawValue.uuidString)"))
+        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(older.id.uuidString)"))
+        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(newer.id.uuidString)"))
+    }
+
+    func testMigratesLegacyWrappedUUIDIndex() throws {
+        let env = makeIsolatedDefaults()
+        defer { cleanupDefaults(env.defaults, suiteName: env.suiteName) }
+
+        struct WrappedID: Encodable {
+            let rawValue: UUID
+        }
+
+        let prefix = "test"
+        let shelf = makeShelf(name: "wrapped")
+        env.defaults.set(
+            try JSONEncoder().encode([WrappedID(rawValue: shelf.id)]),
+            forKey: "\(prefix).index"
+        )
+        env.defaults.set(
+            try JSONEncoder().encode(shelf),
+            forKey: "\(prefix).shelf.\(shelf.id.uuidString)"
+        )
+
+        let store = ShelfStore(backend: .userDefaults(env.defaults, keyPrefix: prefix))
+
+        XCTAssertEqual(store.current(), shelf)
+        XCTAssertNil(env.defaults.data(forKey: "\(prefix).index"))
     }
 
     func testMigratesFirstValidLegacyShelf() throws {
@@ -247,7 +272,7 @@ final class ShelfStoreTests: XCTestCase {
         defer { cleanupDefaults(env.defaults, suiteName: env.suiteName) }
 
         let prefix = "test"
-        let corruptedID = ShelfGroupID(rawValue: UUID())
+        let corruptedID = UUID()
         let fallback = makeShelf(name: "fallback")
         env.defaults.set(
             try JSONEncoder().encode([corruptedID, fallback.id]),
@@ -255,19 +280,19 @@ final class ShelfStoreTests: XCTestCase {
         )
         env.defaults.set(
             Data("not-valid-json-{{{".utf8),
-            forKey: "\(prefix).shelf.\(corruptedID.rawValue.uuidString)"
+            forKey: "\(prefix).shelf.\(corruptedID.uuidString)"
         )
         env.defaults.set(
             try JSONEncoder().encode(fallback),
-            forKey: "\(prefix).shelf.\(fallback.id.rawValue.uuidString)"
+            forKey: "\(prefix).shelf.\(fallback.id.uuidString)"
         )
 
         let store = ShelfStore(backend: .userDefaults(env.defaults, keyPrefix: prefix))
 
         XCTAssertEqual(store.current(), fallback)
         XCTAssertNil(env.defaults.data(forKey: "\(prefix).index"))
-        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(corruptedID.rawValue.uuidString)"))
-        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(fallback.id.rawValue.uuidString)"))
+        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(corruptedID.uuidString)"))
+        XCTAssertNil(env.defaults.data(forKey: "\(prefix).shelf.\(fallback.id.uuidString)"))
     }
 
     func testOnChangeFiresOnEachMutation() {

@@ -7,7 +7,7 @@ public struct ShelfContentView: View {
     let thumbnailService: ThumbnailService?
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
-    let onDeleteItems: ((Set<ItemID>) -> Void)?
+    let onDeleteItems: ((Set<UUID>) -> Void)?
     let onDropItems: (([ShelfItem]) -> Void)?
     let onCollapseRequested: (() -> Void)?
     let onClose: (() -> Void)?
@@ -22,7 +22,7 @@ public struct ShelfContentView: View {
         thumbnailService: ThumbnailService? = nil,
         onSingleDragEnded: ((DragOutResult) -> Void)? = nil,
         onMultiDragEnded: ((MultiDragOutResult) -> Void)? = nil,
-        onDeleteItems: ((Set<ItemID>) -> Void)? = nil,
+        onDeleteItems: ((Set<UUID>) -> Void)? = nil,
         onDropItems: (([ShelfItem]) -> Void)? = nil,
         onCollapseRequested: (() -> Void)? = nil,
         onClose: (() -> Void)? = nil
@@ -368,7 +368,7 @@ private struct StackLayer: Identifiable {
     let rotation: Double
     let offset: CGSize
 
-    var id: ItemID { item.id }
+    var id: UUID { item.id }
 }
 
 private struct StackThumbnailCard: View {
@@ -556,7 +556,7 @@ private struct ShelfDrawerView: View {
     let thumbnailService: ThumbnailService?
     let onSingleDragEnded: ((DragOutResult) -> Void)?
     let onMultiDragEnded: ((MultiDragOutResult) -> Void)?
-    let onDeleteItems: ((Set<ItemID>) -> Void)?
+    let onDeleteItems: ((Set<UUID>) -> Void)?
     let onCollapseRequested: (() -> Void)?
 
     private let columns = [
@@ -612,7 +612,7 @@ private struct ShelfDrawerView: View {
         }
     }
 
-    private func handleClick(itemID: ItemID, modifiers: NSEvent.ModifierFlags) {
+    private func handleClick(itemID: UUID, modifiers: NSEvent.ModifierFlags) {
         if modifiers.contains(.shift) {
             viewModel.extendSelection(to: itemID)
         } else if modifiers.contains(.command) {

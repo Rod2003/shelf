@@ -13,20 +13,20 @@ public protocol QuickLookPanelHosting: AnyObject {
 @MainActor
 public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     public struct Preview {
-        public let itemID: ItemID
+        public let itemID: UUID
         public let url: URL
 
-        public init(itemID: ItemID, url: URL) {
+        public init(itemID: UUID, url: URL) {
             self.itemID = itemID
             self.url = url
         }
     }
 
     private final class PreviewItem: NSObject, QLPreviewItem {
-        let itemID: ItemID
+        let itemID: UUID
         let url: URL
 
-        init(itemID: ItemID, url: URL) {
+        init(itemID: UUID, url: URL) {
             self.itemID = itemID
             self.url = url
         }
@@ -43,7 +43,7 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
     private let resolver: BookmarkResolver
     private var currentItems: [PreviewItem] = []
-    private var sourceFramesByItemID: [ItemID: CGRect] = [:]
+    private var sourceFramesByItemID: [UUID: CGRect] = [:]
     private var heldResolutions: [BookmarkResolver.Resolution] = []
     private var observer: NSObjectProtocol?
     private var keyMonitor: Any?
@@ -76,7 +76,7 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     public func show(
         previews: [Preview],
         bookmarkResolutions: [BookmarkResolver.Resolution],
-        sourceFramesByItemID: [ItemID: CGRect]
+        sourceFramesByItemID: [UUID: CGRect]
     ) {
         releaseHeldResolutions()
 
