@@ -56,7 +56,7 @@ final class ShelfItemTests: XCTestCase {
     func testCodableRoundTripForFileBookmarkKind() throws {
         let bookmark = makeBookmark()
         let original = ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .fileBookmark(bookmark),
             displayName: "file.txt",
             createdAt: Date(timeIntervalSince1970: 1_700_000_100)
@@ -69,7 +69,7 @@ final class ShelfItemTests: XCTestCase {
     func testCodableRoundTripForWebURLKind() throws {
         let url = URL(string: "https://example.com/")!
         let original = ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .webURL(url),
             displayName: "Example",
             createdAt: Date(timeIntervalSince1970: 1_700_000_200)
@@ -81,7 +81,7 @@ final class ShelfItemTests: XCTestCase {
 
     func testCodableRoundTripForTextKind() throws {
         let original = ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .text("Some snippet with unicode: café"),
             displayName: "Note",
             createdAt: Date(timeIntervalSince1970: 1_700_000_300)
@@ -93,7 +93,7 @@ final class ShelfItemTests: XCTestCase {
 
     func testCodableRoundTripForClipboardImageKind() throws {
         let original = ShelfItem(
-            id: ItemID(rawValue: UUID()),
+            id: UUID(),
             kind: .clipboardImage(filename: "shot 2026-05-03.png"),
             displayName: "Clipboard image",
             createdAt: Date(timeIntervalSince1970: 1_700_000_400)
@@ -104,7 +104,7 @@ final class ShelfItemTests: XCTestCase {
     }
 
     func testEquatabilityRequiresSamePayload() {
-        let id = ItemID(rawValue: UUID())
+        let id = UUID()
         let createdAt = Date(timeIntervalSince1970: 1_700_000_500)
         let a = ShelfItem(id: id, kind: .text("foo"), displayName: "n", createdAt: createdAt)
         let b = ShelfItem(id: id, kind: .text("foo"), displayName: "n", createdAt: createdAt)
@@ -115,7 +115,7 @@ final class ShelfItemTests: XCTestCase {
     }
 
     func testKindEqualityIsTypeAware() {
-        let id = ItemID(rawValue: UUID())
+        let id = UUID()
         let createdAt = Date(timeIntervalSince1970: 1_700_000_600)
         let textItem = ShelfItem(
             id: id,

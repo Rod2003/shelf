@@ -19,8 +19,8 @@ public enum ShelfAnimation {
 
 private struct ShelfSelectionState: Equatable {
     struct ExpandedSelection: Equatable {
-        var itemIDs: Set<ItemID> = []
-        var activeItemID: ItemID?
+        var itemIDs: Set<UUID> = []
+        var activeItemID: UUID?
     }
 
     var isCollapsedStackSelected = false
@@ -29,13 +29,13 @@ private struct ShelfSelectionState: Equatable {
 
 @MainActor
 public final class ShelfViewModel: ObservableObject {
-    public let shelfID: ShelfGroupID
+    public let shelfID: UUID
     @Published public var items: [ShelfItem]
     @Published public var isExpanded: Bool
     @Published public private(set) var showsCollapsedPill: Bool
     @Published public private(set) var hidesDrawerLabels: Bool
     @Published public var isDropTargeted: Bool
-    @Published public private(set) var quickLookSourceFrames: [ItemID: CGRect]
+    @Published public private(set) var quickLookSourceFrames: [UUID: CGRect]
     @Published private var selectionState = ShelfSelectionState()
     private var isExpansionTransitionInFlight = false
     private var isWindowAnimationInFlight = false
@@ -43,15 +43,15 @@ public final class ShelfViewModel: ObservableObject {
 
     public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
-    public var selectedItemID: ItemID? {
+    public var selectedItemID: UUID? {
         selectionState.isCollapsedStackSelected ? items.first?.id : nil
     }
 
-    public var drawerSelection: Set<ItemID> {
+    public var drawerSelection: Set<UUID> {
         selectionState.expanded.itemIDs
     }
 
-    public var drawerActiveSelectionID: ItemID? {
+    public var drawerActiveSelectionID: UUID? {
         selectionState.expanded.activeItemID
     }
 
@@ -184,7 +184,7 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func remove(itemID: ItemID) {
+    public func remove(itemID: UUID) {
         items.removeAll { $0.id == itemID }
         selectionState.isCollapsedStackSelected = selectionState.isCollapsedStackSelected && !items.isEmpty
         selectionState.expanded.itemIDs.remove(itemID)
@@ -194,7 +194,7 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func selectOnly(_ itemID: ItemID) {
+    public func selectOnly(_ itemID: UUID) {
         selectionState.expanded.itemIDs = [itemID]
         selectionState.expanded.activeItemID = itemID
     }
@@ -208,7 +208,7 @@ public final class ShelfViewModel: ObservableObject {
         selectionState.isCollapsedStackSelected = false
     }
 
-    public func toggle(_ itemID: ItemID) {
+    public func toggle(_ itemID: UUID) {
         if selectionState.expanded.itemIDs.contains(itemID) {
             selectionState.expanded.itemIDs.remove(itemID)
             if selectionState.expanded.activeItemID == itemID {
@@ -220,7 +220,7 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func extendSelection(to itemID: ItemID) {
+    public func extendSelection(to itemID: UUID) {
         guard
             let anchor = selectionState.expanded.activeItemID,
             let anchorIdx = items.firstIndex(where: { $0.id == anchor }),
@@ -241,7 +241,7 @@ public final class ShelfViewModel: ObservableObject {
         return selectionState.isCollapsedStackSelected ? items : []
     }
 
-    public func setQuickLookSourceFrame(_ frame: CGRect?, for itemIDs: [ItemID]) {
+    public func setQuickLookSourceFrame(_ frame: CGRect?, for itemIDs: [UUID]) {
         let liveIDs = Set(items.map(\.id))
         var nextFrames = quickLookSourceFrames
 

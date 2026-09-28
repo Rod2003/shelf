@@ -33,13 +33,13 @@ public final class ShelfWindowManager {
     public var isKey: Bool { controller?.panel.isKeyWindow == true }
 
     public func openShelf(
-        _ shelfID: ShelfGroupID,
+        _ shelfID: UUID,
         contentView: NSView,
         baseOrigin: CGPoint
     ) {
         if let existing = controller {
             existing.show()
-            log.debug("Re-showed existing panel id=\(existing.shelfID.rawValue.uuidString, privacy: .public)")
+            log.debug("Re-showed existing panel id=\(existing.shelfID.uuidString, privacy: .public)")
             return
         }
         let controller = ShelfWindowController(
@@ -52,7 +52,7 @@ public final class ShelfWindowManager {
         }
         self.controller = controller
         controller.show()
-        log.info("Opened shelf panel id=\(shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Opened shelf panel id=\(shelfID.uuidString, privacy: .public)")
     }
 
     public func closeShelf() {
@@ -90,7 +90,7 @@ public final class ShelfWindowManager {
             in: targetScreen.visibleFrame
         )
         controller.panel.setFrameOrigin(clamped)
-        log.info("Repositioned shelf id=\(controller.shelfID.rawValue.uuidString, privacy: .public) to (\(clamped.x, privacy: .public), \(clamped.y, privacy: .public))")
+        log.info("Repositioned shelf id=\(controller.shelfID.uuidString, privacy: .public) to (\(clamped.x, privacy: .public), \(clamped.y, privacy: .public))")
     }
 
     private func handleScreenChange() {
@@ -101,7 +101,7 @@ public final class ShelfWindowManager {
     private func handleClosed() {
         guard let closed = controller else { return }
         controller = nil
-        log.info("Shelf panel released id=\(closed.shelfID.rawValue.uuidString, privacy: .public)")
+        log.info("Shelf panel released id=\(closed.shelfID.uuidString, privacy: .public)")
         onShelfClosed?()
     }
 }

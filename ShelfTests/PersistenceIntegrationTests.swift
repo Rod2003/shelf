@@ -86,21 +86,29 @@ final class PersistenceIntegrationTests: XCTestCase {
         XCTAssertEqual(filename, "Image-roundtrip.png")
     }
 
-    func testShelfGroupDecodesPreRenameShelfJSONShape() throws {
-        let id = ShelfGroupID(rawValue: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!)
+    func testShelfGroupDecodesLegacyWrappedUUIDJSON() throws {
+        let id = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let itemID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
         let lastUsedAt = Date(timeIntervalSince1970: 1_700_000_100)
         let item = ShelfItem(
-            id: ItemID(rawValue: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!),
+            id: itemID,
             kind: .text("legacy payload"),
             displayName: "legacy payload",
             createdAt: createdAt
         )
         let preRenameJSON = try JSONEncoder().encode(
             LegacyShelfJSON(
-                id: id,
+                id: LegacyWrappedUUID(rawValue: id),
                 name: "legacy",
-                items: [item],
+                items: [
+                    LegacyItemJSON(
+                        id: LegacyWrappedUUID(rawValue: itemID),
+                        kind: item.kind,
+                        displayName: item.displayName,
+                        createdAt: createdAt
+                    )
+                ],
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt
             )
@@ -148,11 +156,11 @@ final class PersistenceIntegrationTests: XCTestCase {
         )
         defaults.set(
             try JSONEncoder().encode(newer),
-            forKey: "\(keyPrefix!).shelf.\(newer.id.rawValue.uuidString)"
+            forKey: "\(keyPrefix!).shelf.\(newer.id.uuidString)"
         )
         defaults.set(
             try JSONEncoder().encode(older),
-            forKey: "\(keyPrefix!).shelf.\(older.id.rawValue.uuidString)"
+            forKey: "\(keyPrefix!).shelf.\(older.id.uuidString)"
         )
 
         let restored = makeBackend().makeShelfStore()
@@ -160,8 +168,8 @@ final class PersistenceIntegrationTests: XCTestCase {
         XCTAssertEqual(restored.current(), newer)
         XCTAssertNotNil(defaults.data(forKey: "\(keyPrefix!).shelf"))
         XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).index"))
-        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(newer.id.rawValue.uuidString)"))
-        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(older.id.rawValue.uuidString)"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(newer.id.uuidString)"))
+        XCTAssertNil(defaults.data(forKey: "\(keyPrefix!).shelf.\(older.id.uuidString)"))
     }
 
     func testEnsureApplicationSupportIsIdempotent() {
@@ -204,10 +212,21 @@ final class PersistenceIntegrationTests: XCTestCase {
     }
 }
 
+private struct LegacyWrappedUUID: Codable {
+    let rawValue: UUID
+}
+
+private struct LegacyItemJSON: Codable {
+    let id: LegacyWrappedUUID
+    let kind: ShelfItemKind
+    let displayName: String
+    let createdAt: Date
+}
+
 private struct LegacyShelfJSON: Codable {
-    let id: ShelfGroupID
+    let id: LegacyWrappedUUID
     let name: String
-    let items: [ShelfItem]
+    let items: [LegacyItemJSON]
     let createdAt: Date
     let lastUsedAt: Date
 }

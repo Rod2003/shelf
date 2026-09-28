@@ -6,13 +6,13 @@ import UniformTypeIdentifiers
 
 /// Remove shelf entries only when `promiseAttempted && promiseSucceeded`.
 public struct DragOutResult: Sendable {
-    public let itemID: ItemID
+    public let itemID: UUID
     public let operation: NSDragOperation
     public let promiseSucceeded: Bool
     public let promiseAttempted: Bool
 
     public init(
-        itemID: ItemID,
+        itemID: UUID,
         operation: NSDragOperation,
         promiseSucceeded: Bool,
         promiseAttempted: Bool
@@ -29,7 +29,7 @@ public struct MultiDragOutResult: Sendable {
     public let operation: NSDragOperation
 
     public struct PerItem: Sendable {
-        public let itemID: ItemID
+        public let itemID: UUID
         public let promiseSucceeded: Bool
         public let promiseAttempted: Bool
     }
@@ -122,11 +122,11 @@ fileprivate final class MultiPromiseOutcome: @unchecked Sendable {
         return q
     }()
 
-    func reset(itemIDs newIDs: [ItemID]) {
+    func reset(itemIDs newIDs: [UUID]) {
         lock.lock()
         attempted.removeAll()
         succeeded.removeAll()
-        itemIDs = newIDs.map { $0.rawValue.uuidString }
+        itemIDs = newIDs.map { $0.uuidString }
         lock.unlock()
     }
 
@@ -149,7 +149,7 @@ fileprivate final class MultiPromiseOutcome: @unchecked Sendable {
         return ids.compactMap { idString in
             guard let uuid = UUID(uuidString: idString) else { return nil }
             return MultiDragOutResult.PerItem(
-                itemID: ItemID(rawValue: uuid),
+                itemID: uuid,
                 promiseSucceeded: succeeded.contains(idString),
                 promiseAttempted: attempted.contains(idString)
             )
@@ -413,7 +413,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
                 "internalShelfDrag": true,
             ]
             if includeItemID {
-                info["itemID"] = item.id.rawValue.uuidString
+                info["itemID"] = item.id.uuidString
             }
             if let fileURLString {
                 info["fileURLString"] = fileURLString
@@ -431,7 +431,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
                 "internalShelfDrag": true,
             ]
             if includeItemID {
-                info["itemID"] = item.id.rawValue.uuidString
+                info["itemID"] = item.id.uuidString
             }
             if let url = resolvedURL {
                 info["fileURLString"] = url.absoluteString
@@ -500,7 +500,7 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
         let succeeded = promiseOutcome.succeeded
         let attempted = promiseOutcome.attempted
         Self.log.info(
-            "Drag-out ended id=\(item.id.rawValue.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public) promiseAttempted=\(attempted, privacy: .public) promiseSucceeded=\(succeeded, privacy: .public)"
+            "Drag-out ended id=\(item.id.uuidString, privacy: .public) operation=\(operation.rawValue, privacy: .public) promiseAttempted=\(attempted, privacy: .public) promiseSucceeded=\(succeeded, privacy: .public)"
         )
         onDragEnded(DragOutResult(
             itemID: item.id,

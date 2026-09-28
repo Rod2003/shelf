@@ -103,7 +103,7 @@ public final class ShelfStore: @unchecked Sendable {
             return nil
         }
 
-        guard let ids = try? JSONDecoder().decode([ShelfGroupID].self, from: data) else { return nil }
+        guard let ids = decodeLegacyIndex(data) else { return nil }
         var migratedShelf: ShelfGroup?
         var legacyKeysToRemove = [indexKey]
         for id in ids {
@@ -159,8 +159,19 @@ public final class ShelfStore: @unchecked Sendable {
         "\(prefix).index"
     }
 
-    private static func legacyShelfKey(prefix: String, id: ShelfGroupID) -> String {
-        "\(prefix).shelf.\(id.rawValue.uuidString)"
+    private static func legacyShelfKey(prefix: String, id: UUID) -> String {
+        "\(prefix).shelf.\(id.uuidString)"
+    }
+
+    private static func decodeLegacyIndex(_ data: Data) -> [UUID]? {
+        let decoder = JSONDecoder()
+        if let ids = try? decoder.decode([UUID].self, from: data) {
+            return ids
+        }
+        if let wrapped = try? decoder.decode([WrappedOrBareUUID].self, from: data) {
+            return wrapped.map(\.value)
+        }
+        return nil
     }
 
     private func withLock<Result>(_ body: () -> Result) -> Result {
