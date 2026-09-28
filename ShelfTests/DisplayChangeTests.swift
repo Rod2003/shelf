@@ -92,7 +92,7 @@ final class DisplayChangeTests: XCTestCase {
             frame: CGRect(x: 0, y: 0, width: 1920, height: 1080),
             visibleFrame: CGRect(x: 0, y: 0, width: 1920, height: 1055)
         )
-        manager.repositionPanelsForScreenChange(screens: [primary])
-        XCTAssertEqual(manager.visibleShelfCount, 0)
+        manager.repositionIfOffScreen(screens: [primary])
+        XCTAssertFalse(manager.isVisible)
     }
 }

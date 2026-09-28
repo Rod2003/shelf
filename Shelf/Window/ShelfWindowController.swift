@@ -5,10 +5,6 @@ import QuickLookUI
 import ShelfCore
 
 @MainActor
-public protocol ShelfWindowControllerDelegate: AnyObject {
-    func shelfWindowDidClose(_ controller: ShelfWindowController)
-}
-
 public final class ShelfKeyHandlingPanel: NSPanel {
     /// Return true to consume; false to let the responder chain handle it.
     public var onKeyDown: ((NSEvent) -> Bool)?
@@ -46,7 +42,7 @@ public final class ShelfKeyHandlingPanel: NSPanel {
 public final class ShelfWindowController: NSObject, NSWindowDelegate {
     public let shelfID: ShelfGroupID
     public let panel: ShelfKeyHandlingPanel
-    public weak var delegate: ShelfWindowControllerDelegate?
+    public var onDidClose: (() -> Void)?
 
     public var onKeyDown: ((NSEvent) -> Bool)? {
         get { panel.onKeyDown }
@@ -185,7 +181,7 @@ public final class ShelfWindowController: NSObject, NSWindowDelegate {
 
     nonisolated public func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
-            self.delegate?.shelfWindowDidClose(self)
+            self.onDidClose?()
         }
     }
 }

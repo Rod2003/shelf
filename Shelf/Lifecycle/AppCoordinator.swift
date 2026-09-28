@@ -47,7 +47,7 @@ public final class AppCoordinator {
 
     public func teardown() {
         shakeDetector.stop()
-        windowManager.closeAll()
+        windowManager.closeShelf()
         log.info("AppCoordinator teardown")
     }
 
@@ -95,7 +95,7 @@ public final class AppCoordinator {
     }
 
     private func showShelfAtCursor() {
-        if windowManager.visibleShelfCount > 0 {
+        if windowManager.isVisible {
             windowManager.focusShelf()
             log.debug("Focused existing shelf")
             return
@@ -187,7 +187,7 @@ public final class AppCoordinator {
     }
 
     private func publishActiveShelfToMenu() {
-        menuBar.activeShelf = windowManager.visibleShelfCount > 0 ? shelfStore.current() : nil
+        menuBar.activeShelf = windowManager.isVisible ? shelfStore.current() : nil
     }
 
     private func showAboutPanel() {
@@ -342,9 +342,9 @@ public final class AppCoordinator {
     }
 
     private func openQuickLookForKeyShelf() {
-        log.debug("Quick Look open requested shelfKey=\(self.windowManager.isShelfKey(), privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
+        log.debug("Quick Look open requested shelfKey=\(self.windowManager.isKey, privacy: .public) quickLookVisible=\(self.quickLook.isVisible, privacy: .public)")
 
-        guard windowManager.isShelfKey() else {
+        guard windowManager.isKey else {
             log.debug("Quick Look skipped: no key shelf")
             return
         }
