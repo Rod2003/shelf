@@ -12,12 +12,6 @@ final class BookmarkResolver: Sendable {
         let url: URL
         let isStale: Bool
         let refreshedData: Data
-
-        init(url: URL, isStale: Bool, refreshedData: Data) {
-            self.url = url
-            self.isStale = isStale
-            self.refreshedData = refreshedData
-        }
     }
 
     enum ResolutionError: Error {

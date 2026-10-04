@@ -10,18 +10,6 @@ struct DragOutResult: Sendable {
     let operation: NSDragOperation
     let promiseSucceeded: Bool
     let promiseAttempted: Bool
-
-    init(
-        itemID: UUID,
-        operation: NSDragOperation,
-        promiseSucceeded: Bool,
-        promiseAttempted: Bool
-    ) {
-        self.itemID = itemID
-        self.operation = operation
-        self.promiseSucceeded = promiseSucceeded
-        self.promiseAttempted = promiseAttempted
-    }
 }
 
 struct MultiDragOutResult: Sendable {
@@ -32,11 +20,6 @@ struct MultiDragOutResult: Sendable {
         let itemID: UUID
         let promiseSucceeded: Bool
         let promiseAttempted: Bool
-    }
-
-    init(outcomes: [PerItem], operation: NSDragOperation) {
-        self.outcomes = outcomes
-        self.operation = operation
     }
 }
 
