@@ -15,11 +15,6 @@ final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     struct Preview {
         let itemID: UUID
         let url: URL
-
-        init(itemID: UUID, url: URL) {
-            self.itemID = itemID
-            self.url = url
-        }
     }
 
     private final class PreviewItem: NSObject, QLPreviewItem {

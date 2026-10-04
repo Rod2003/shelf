@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 struct WindowDragHandle: NSViewRepresentable {
-    init() {}
-
     func makeNSView(context: Context) -> NSView {
         DragHandleNSView()
     }
