@@ -168,22 +168,6 @@ public struct DragOutCellWrapper<Content: View>: NSViewRepresentable {
 
     public init(
         item: ShelfItem,
-        onTap: @escaping () -> Void,
-        onDragEnded: @escaping (DragOutResult) -> Void,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.init(
-            item: item,
-            onTapWithModifiers: { _ in onTap() },
-            onDragEnded: onDragEnded,
-            multiItemsProvider: nil,
-            onMultiDragEnded: nil,
-            content: content
-        )
-    }
-
-    public init(
-        item: ShelfItem,
         onTapWithModifiers: @escaping (NSEvent.ModifierFlags) -> Void,
         onDragEnded: @escaping (DragOutResult) -> Void,
         multiItemsProvider: (() -> [ShelfItem])? = nil,
@@ -596,15 +580,10 @@ public final class DragOutCellNSView: NSView, NSDraggingSource, NSFilePromisePro
             completionHandler(Self.promiseError(code: -3, message: "Promise missing image filename"))
             return
         }
-        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            completionHandler(Self.promiseError(code: -4, message: "Application Support directory unreachable"))
+        guard let source = DefaultsBackend.clipboardImageURL(filename: filename) else {
+            completionHandler(Self.promiseError(code: -4, message: "Clipboard image is missing"))
             return
         }
-
-        let source = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
-            .appendingPathComponent(filename)
         Self.log.info("writePromiseTo: clipboardImage source=\(source.path, privacy: .public) dest=\(url.path, privacy: .public)")
 
         do {

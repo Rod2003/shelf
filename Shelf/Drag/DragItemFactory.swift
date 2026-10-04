@@ -1,16 +1,10 @@
 import AppKit
-import Foundation
 import OSLog
 import ShelfCore
 import UniformTypeIdentifiers
 
-private enum ShelfDragLog {
-    static let appBundleIdentifier = "dev.rod.shelf"
-    static let logger = Logger(subsystem: appBundleIdentifier, category: "drag")
-}
-
 public enum DragItemFactory {
-    private static let log = ShelfDragLog.logger
+    private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
 
     public static let acceptedContentTypes: [UTType] = [
         .fileURL,
@@ -146,7 +140,7 @@ public enum DragItemFactory {
 }
 
 enum DropItemBuilder {
-    private static let log = ShelfDragLog.logger
+    private static let log = Logger(subsystem: "dev.rod.shelf", category: "drag")
     private static let maxDisplayNameLength: Int = 80
 
     static func makeFileBookmarkItem(from url: URL) -> ShelfItem? {
@@ -205,13 +199,10 @@ enum DropItemBuilder {
 
     private static func clipboardImagesDirectory() -> URL? {
         let fm = FileManager.default
-        guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+        guard let dir = DefaultsBackend.clipboardImagesDirectoryURL(fileManager: fm) else {
             log.error("Application Support directory unreachable")
             return nil
         }
-        let dir = appSupport
-            .appendingPathComponent("Shelf", isDirectory: true)
-            .appendingPathComponent("clipboard-images", isDirectory: true)
         do {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             return dir
