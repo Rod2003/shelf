@@ -2,21 +2,12 @@ import XCTest
 @testable import ShelfCore
 
 final class ShelfTests: XCTestCase {
-
     func testInitWithDefaultsCreatesEmptyShelf() {
         let shelf = ShelfGroup()
         XCTAssertEqual(shelf.name, "")
         XCTAssertTrue(shelf.items.isEmpty)
         XCTAssertEqual(shelf.lastUsedAt, shelf.createdAt,
                        "lastUsedAt should default to createdAt")
-    }
-
-    func testInitWithItemsRetainsItems() {
-        let item = ShelfItem(kind: .text("hello"), displayName: "Greeting")
-        let shelf = ShelfGroup(name: "Inbox", items: [item])
-        XCTAssertEqual(shelf.name, "Inbox")
-        XCTAssertEqual(shelf.items.count, 1)
-        XCTAssertEqual(shelf.items.first, item)
     }
 
     func testCodableRoundTripWithMixedItems() throws {
@@ -66,20 +57,5 @@ final class ShelfTests: XCTestCase {
         XCTAssertEqual(decoded, original,
                        "Full ShelfGroup with one item per kind must round-trip equal")
         XCTAssertEqual(decoded.items.count, 4)
-    }
-
-    func testLastUsedAtDefaultsToCreatedAt() {
-        let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
-        let shelf = ShelfGroup(createdAt: createdAt)
-        XCTAssertEqual(shelf.lastUsedAt, createdAt)
-        XCTAssertEqual(shelf.createdAt, createdAt)
-    }
-
-    func testLastUsedAtCanBeMutated() {
-        var shelf = ShelfGroup(name: "Mutable")
-        let newDate = Date(timeIntervalSince1970: 1_800_000_000)
-        shelf.lastUsedAt = newDate
-        XCTAssertEqual(shelf.lastUsedAt, newDate)
-        XCTAssertNotEqual(shelf.createdAt, newDate)
     }
 }

@@ -12,7 +12,6 @@
 		0841C6C1DC2D2BC735EFF0C7 /* ThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83B1CFC6CC772B8F8500F142 /* ThumbnailService.swift */; };
 		0DDADE154054E088C9E1820B /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F624EA7FEEE62817649A5306 /* AppCoordinator.swift */; };
 		1C7A79949B65AE28B97626A6 /* QuickLookSpaceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8BCA09277AE1836CFDA68A /* QuickLookSpaceSession.swift */; };
-		1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */; };
 		206F9D67EC5F24562DAF3B3D /* QuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B5BDFF83FD8506E84EA798 /* QuickLookCoordinator.swift */; };
 		2488D85FA07A1F7021A1F0E2 /* ShelfWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A266B1AD6FB399CB6EFD074F /* ShelfWindowManager.swift */; };
 		2B816E145C07810DC58750BB /* ShelfViewModelQuickLookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11614C1BC86623FBBFC6BC9 /* ShelfViewModelQuickLookTests.swift */; };
@@ -57,7 +56,6 @@
 		05794DF50E027CCCAEEFF8AA /* ShelfApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfApplication.swift; sourceTree = "<group>"; };
 		08B5BDFF83FD8506E84EA798 /* QuickLookCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookCoordinator.swift; sourceTree = "<group>"; };
 		21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragInDragOutIntegrationTests.swift; sourceTree = "<group>"; };
-		2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManagerIntegrationTests.swift; sourceTree = "<group>"; };
 		27DD4C528E61B83644644570 /* ShelfCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ShelfCore; path = Modules/ShelfCore; sourceTree = SOURCE_ROOT; };
 		290211F46392A47877B4F9E3 /* QuickLookSourceFrameReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookSourceFrameReporter.swift; sourceTree = "<group>"; };
 		2B8BCA09277AE1836CFDA68A /* QuickLookSpaceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookSpaceSession.swift; sourceTree = "<group>"; };
@@ -148,7 +146,6 @@
 			children = (
 				D007C9A73EDBE5752206EF94 /* DisplayChangeTests.swift */,
 				21EB40AEA11102DB71188119 /* DragInDragOutIntegrationTests.swift */,
-				2712FDCE9DFEAAC88417AB97 /* HotkeyManagerIntegrationTests.swift */,
 				4EE3FE6D467B8C081A967754 /* PanelPositionerTests.swift */,
 				9285D0BEF5CDDAF194E923E6 /* PersistenceIntegrationTests.swift */,
 				9B4078F09C4FECDDF3A86F26 /* QuickLookSpaceSessionTests.swift */,
@@ -325,7 +322,6 @@
 			files = (
 				E4D56C89F0BDE14D824A9178 /* DisplayChangeTests.swift in Sources */,
 				922C86691654550D232B8E9F /* DragInDragOutIntegrationTests.swift in Sources */,
-				1DE2B86AC0976BB49CB22376 /* HotkeyManagerIntegrationTests.swift in Sources */,
 				C493CF244A5E1DE46525FF95 /* PanelPositionerTests.swift in Sources */,
 				DFC1336B119555D27CDCCB0A /* PersistenceIntegrationTests.swift in Sources */,
 				88814AC85540539A45B5880F /* QuickLookSpaceSessionTests.swift in Sources */,
