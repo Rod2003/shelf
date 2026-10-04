@@ -1,31 +1,29 @@
 import AppKit
-import CoreGraphics
-import Foundation
 
 @MainActor
-public enum PanelPositioner {
-    public static let edgeMargin: CGFloat = 8
+enum PanelPositioner {
+    static let edgeMargin: CGFloat = 8
 
-    public static let collapsedPanelSize = CGSize(width: 180, height: 180)
-    public static let expandedPanelSize = CGSize(width: 280, height: 280)
-    public static let expansionDuration: TimeInterval = 0.32
-    public static let defaultPanelSize = collapsedPanelSize
+    static let collapsedPanelSize = CGSize(width: 180, height: 180)
+    static let expandedPanelSize = CGSize(width: 280, height: 280)
+    static let expansionDuration: TimeInterval = 0.32
+    static let defaultPanelSize = collapsedPanelSize
 
-    public struct Screen: Equatable {
-        public let frame: CGRect
-        public let visibleFrame: CGRect
+    struct Screen: Equatable {
+        let frame: CGRect
+        let visibleFrame: CGRect
 
-        public init(frame: CGRect, visibleFrame: CGRect) {
+        init(frame: CGRect, visibleFrame: CGRect) {
             self.frame = frame
             self.visibleFrame = visibleFrame
         }
 
-        public init(_ ns: NSScreen) {
+        init(_ ns: NSScreen) {
             self.init(frame: ns.frame, visibleFrame: ns.visibleFrame)
         }
     }
 
-    public static func computeOrigin(
+    static func computeOrigin(
         forCursor cursor: CGPoint,
         panelSize: CGSize = defaultPanelSize,
         edgeMargin: CGFloat = edgeMargin,
@@ -45,7 +43,7 @@ public enum PanelPositioner {
         )
     }
 
-    public static func clamp(
+    static func clamp(
         origin: CGPoint,
         panelSize: CGSize,
         in visibleFrame: CGRect,
@@ -60,15 +58,15 @@ public enum PanelPositioner {
         return CGPoint(x: x, y: y)
     }
 
-    public static func containingScreen(of point: CGPoint, screens: [Screen]) -> Screen? {
+    static func containingScreen(of point: CGPoint, screens: [Screen]) -> Screen? {
         screens.first { $0.frame.contains(point) }
     }
 
-    public static func liveScreens() -> [Screen] {
+    static func liveScreens() -> [Screen] {
         NSScreen.screens.map(Screen.init)
     }
 
-    public static func liveCursor() -> CGPoint {
+    static func liveCursor() -> CGPoint {
         NSEvent.mouseLocation
     }
 }

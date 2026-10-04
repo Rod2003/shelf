@@ -1,20 +1,18 @@
-import Foundation
-import Combine
 import SwiftUI
 import ShelfCore
 
-public enum ShelfAnimation {
-    public static let expansionDuration: TimeInterval = PanelPositioner.expansionDuration
-    public static let collapseDuration: TimeInterval = 0.48
-    public static let expansion: Animation = .timingCurve(
+enum ShelfAnimation {
+    static let expansionDuration: TimeInterval = PanelPositioner.expansionDuration
+    static let collapseDuration: TimeInterval = 0.48
+    static let expansion: Animation = .timingCurve(
         0.32,
         0.94,
         0.36,
         1.0,
         duration: PanelPositioner.expansionDuration
     )
-    public static let collapse: Animation = .timingCurve(0.22, 0.88, 0.24, 1.0, duration: 0.48)
-    public static let pillFade: Animation = .easeOut(duration: 0.08)
+    static let collapse: Animation = .timingCurve(0.22, 0.88, 0.24, 1.0, duration: 0.48)
+    static let pillFade: Animation = .easeOut(duration: 0.08)
 }
 
 private struct ShelfSelectionState: Equatable {
@@ -28,34 +26,34 @@ private struct ShelfSelectionState: Equatable {
 }
 
 @MainActor
-public final class ShelfViewModel: ObservableObject {
-    public let shelfID: UUID
-    @Published public var items: [ShelfItem]
-    @Published public var isExpanded: Bool
-    @Published public private(set) var showsCollapsedPill: Bool
-    @Published public private(set) var hidesDrawerLabels: Bool
-    @Published public var isDropTargeted: Bool
-    @Published public private(set) var quickLookSourceFrames: [UUID: CGRect]
+final class ShelfViewModel: ObservableObject {
+    let shelfID: UUID
+    @Published var items: [ShelfItem]
+    @Published var isExpanded: Bool
+    @Published private(set) var showsCollapsedPill: Bool
+    @Published private(set) var hidesDrawerLabels: Bool
+    @Published var isDropTargeted: Bool
+    @Published private(set) var quickLookSourceFrames: [UUID: CGRect]
     @Published private var selectionState = ShelfSelectionState()
     private var isExpansionTransitionInFlight = false
     private var isWindowAnimationInFlight = false
     private var desiredExpanded = false
 
-    public var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
+    var animateWindow: ((_ expanded: Bool, _ duration: TimeInterval, _ completion: @escaping () -> Void) -> Void)?
 
-    public var selectedItemID: UUID? {
+    var selectedItemID: UUID? {
         selectionState.isCollapsedStackSelected ? items.first?.id : nil
     }
 
-    public var drawerSelection: Set<UUID> {
+    var drawerSelection: Set<UUID> {
         selectionState.expanded.itemIDs
     }
 
-    public var drawerActiveSelectionID: UUID? {
+    var drawerActiveSelectionID: UUID? {
         selectionState.expanded.activeItemID
     }
 
-    public init(shelf: ShelfGroup) {
+    init(shelf: ShelfGroup) {
         self.shelfID = shelf.id
         self.items = shelf.items
         self.isExpanded = false
@@ -65,7 +63,7 @@ public final class ShelfViewModel: ObservableObject {
         self.quickLookSourceFrames = [:]
     }
 
-    public func setExpanded(_ expanded: Bool) {
+    func setExpanded(_ expanded: Bool) {
         guard desiredExpanded != expanded || isExpanded != expanded else { return }
         desiredExpanded = expanded
 
@@ -166,14 +164,14 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func setDropTargeted(_ targeted: Bool) {
+    func setDropTargeted(_ targeted: Bool) {
         guard isDropTargeted != targeted else { return }
         withAnimation(.easeOut(duration: 0.12)) {
             isDropTargeted = targeted
         }
     }
 
-    public func reload(from shelf: ShelfGroup) {
+    func reload(from shelf: ShelfGroup) {
         self.items = shelf.items
         let liveIDs = Set(shelf.items.map(\.id))
         selectionState.isCollapsedStackSelected = selectionState.isCollapsedStackSelected && !shelf.items.isEmpty
@@ -184,7 +182,7 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func remove(itemID: UUID) {
+    func remove(itemID: UUID) {
         items.removeAll { $0.id == itemID }
         selectionState.isCollapsedStackSelected = selectionState.isCollapsedStackSelected && !items.isEmpty
         selectionState.expanded.itemIDs.remove(itemID)
@@ -194,21 +192,21 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func selectOnly(_ itemID: UUID) {
+    func selectOnly(_ itemID: UUID) {
         selectionState.expanded.itemIDs = [itemID]
         selectionState.expanded.activeItemID = itemID
     }
 
-    public func selectCollapsedStack() {
+    func selectCollapsedStack() {
         selectionState.isCollapsedStackSelected = !items.isEmpty
     }
 
-    public func clearCollapsedStackSelection() {
+    func clearCollapsedStackSelection() {
         guard !isExpanded else { return }
         selectionState.isCollapsedStackSelected = false
     }
 
-    public func toggle(_ itemID: UUID) {
+    func toggle(_ itemID: UUID) {
         if selectionState.expanded.itemIDs.contains(itemID) {
             selectionState.expanded.itemIDs.remove(itemID)
             if selectionState.expanded.activeItemID == itemID {
@@ -220,7 +218,7 @@ public final class ShelfViewModel: ObservableObject {
         }
     }
 
-    public func extendSelection(to itemID: UUID) {
+    func extendSelection(to itemID: UUID) {
         guard
             let anchor = selectionState.expanded.activeItemID,
             let anchorIdx = items.firstIndex(where: { $0.id == anchor }),
@@ -234,14 +232,14 @@ public final class ShelfViewModel: ObservableObject {
         selectionState.expanded.activeItemID = itemID
     }
 
-    public var quickLookTargetItems: [ShelfItem] {
+    var quickLookTargetItems: [ShelfItem] {
         if isExpanded {
             return items.filter { selectionState.expanded.itemIDs.contains($0.id) }
         }
         return selectionState.isCollapsedStackSelected ? items : []
     }
 
-    public func setQuickLookSourceFrame(_ frame: CGRect?, for itemIDs: [UUID]) {
+    func setQuickLookSourceFrame(_ frame: CGRect?, for itemIDs: [UUID]) {
         let liveIDs = Set(items.map(\.id))
         var nextFrames = quickLookSourceFrames
 

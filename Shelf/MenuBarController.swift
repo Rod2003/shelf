@@ -3,23 +3,23 @@ import OSLog
 import ShelfCore
 
 @MainActor
-public final class MenuBarController: NSObject {
+final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
 
-    public var onShowShelf: (() -> Void)?
+    var onShowShelf: (() -> Void)?
 
-    public var onFocusShelf: (() -> Void)?
+    var onFocusShelf: (() -> Void)?
 
-    public var onAbout: (() -> Void)?
+    var onAbout: (() -> Void)?
 
-    public var onQuit: (() -> Void)?
+    var onQuit: (() -> Void)?
 
-    public var activeShelf: ShelfGroup? {
+    var activeShelf: ShelfGroup? {
         didSet { rebuildMenu() }
     }
 
-    public override init() {
+    override init() {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         configureStatusItem()

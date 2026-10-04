@@ -4,19 +4,19 @@ import OSLog
 import ShelfCore
 
 @MainActor
-public protocol QuickLookPanelHosting: AnyObject {
+protocol QuickLookPanelHosting: AnyObject {
     func acceptsPreviewPanelControl() -> Bool
     func beginPreviewPanelControl()
     func endPreviewPanelControl()
 }
 
 @MainActor
-public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
-    public struct Preview {
-        public let itemID: UUID
-        public let url: URL
+final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
+    struct Preview {
+        let itemID: UUID
+        let url: URL
 
-        public init(itemID: UUID, url: URL) {
+        init(itemID: UUID, url: URL) {
             self.itemID = itemID
             self.url = url
         }
@@ -50,13 +50,13 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     private var isPresenting = false
     private var spaceSession = QuickLookSpaceSession()
 
-    public var onDidClose: (() -> Void)?
-    public var onOpenRequested: (() -> Void)?
-    public var isVisible: Bool {
+    var onDidClose: (() -> Void)?
+    var onOpenRequested: (() -> Void)?
+    var isVisible: Bool {
         isPresenting && !currentItems.isEmpty && QLPreviewPanel.shared()?.isVisible == true
     }
 
-    public init(resolver: BookmarkResolver) {
+    init(resolver: BookmarkResolver) {
         self.resolver = resolver
         super.init()
     }
@@ -73,7 +73,7 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
         }
     }
 
-    public func show(
+    func show(
         previews: [Preview],
         bookmarkResolutions: [BookmarkResolver.Resolution],
         sourceFramesByItemID: [UUID: CGRect]
@@ -106,7 +106,7 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     }
 
     @discardableResult
-    public func closeIfVisible() -> Bool {
+    func closeIfVisible() -> Bool {
         let panel = QLPreviewPanel.shared()
         guard isVisible else {
             log.debug("Quick Look close skipped: visible=\(panel?.isVisible == true, privacy: .public) currentItemCount=\(self.currentItems.count, privacy: .public)")
@@ -119,16 +119,16 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
         return true
     }
 
-    public func acceptsPreviewPanelControl() -> Bool {
+    func acceptsPreviewPanelControl() -> Bool {
         isPresenting && !currentItems.isEmpty
     }
 
-    public func beginPreviewPanelControl() {
+    func beginPreviewPanelControl() {
         guard let panel = QLPreviewPanel.shared() else { return }
         becomePreviewController(for: panel)
     }
 
-    public func endPreviewPanelControl() {}
+    func endPreviewPanelControl() {}
 
     private func installCloseObserverIfNeeded(panel: QLPreviewPanel) {
         guard observer == nil else { return }
@@ -155,7 +155,7 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
     }
 
     @discardableResult
-    public func handleSpaceEvent(_ event: NSEvent) -> Bool {
+    func handleSpaceEvent(_ event: NSEvent) -> Bool {
         guard SpaceKey.isUnmodifiedSpace(event) else { return false }
         switch event.type {
         case .keyDown:
@@ -238,21 +238,21 @@ public final class QuickLookCoordinator: NSObject, QuickLookPanelHosting {
 }
 
 extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDataSource {
-    public func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
         currentItems.count
     }
 
-    public func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
         currentItems[index]
     }
 }
 
 extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDelegate {
-    public func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+    func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
         handleSpaceEvent(event)
     }
 
-    public func previewPanel(
+    func previewPanel(
         _ panel: QLPreviewPanel!,
         sourceFrameOnScreenFor item: (any QLPreviewItem)!
     ) -> NSRect {
@@ -266,7 +266,7 @@ extension QuickLookCoordinator: @preconcurrency QLPreviewPanelDelegate {
         return frame
     }
 
-    public func previewPanel(
+    func previewPanel(
         _ panel: QLPreviewPanel!,
         transitionImageFor item: (any QLPreviewItem)!,
         contentRect: UnsafeMutablePointer<NSRect>!

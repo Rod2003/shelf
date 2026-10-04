@@ -2,16 +2,16 @@ import Foundation
 import OSLog
 import ShelfCore
 
-public final class DefaultsBackend {
-    public static let canonicalKeyPrefix = "dev.rod.shelf"
+final class DefaultsBackend {
+    static let canonicalKeyPrefix = "dev.rod.shelf"
 
-    public static let clipboardImagesSubpath = "Shelf/clipboard-images"
+    static let clipboardImagesSubpath = "Shelf/clipboard-images"
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "persist")
     private let defaults: UserDefaults
     private let keyPrefix: String
 
-    public init(
+    init(
         defaults: UserDefaults = .standard,
         keyPrefix: String = DefaultsBackend.canonicalKeyPrefix
     ) {
@@ -19,11 +19,11 @@ public final class DefaultsBackend {
         self.keyPrefix = keyPrefix
     }
 
-    public func makeShelfStore() -> ShelfStore {
+    func makeShelfStore() -> ShelfStore {
         ShelfStore(backend: .userDefaults(defaults, keyPrefix: keyPrefix))
     }
 
-    public static func clipboardImagesDirectoryURL(
+    static func clipboardImagesDirectoryURL(
         fileManager: FileManager = .default
     ) -> URL? {
         guard let appSupport = fileManager.urls(
@@ -38,7 +38,7 @@ public final class DefaultsBackend {
         )
     }
 
-    public static func clipboardImageURL(
+    static func clipboardImageURL(
         filename: String,
         fileManager: FileManager = .default
     ) -> URL? {
@@ -50,7 +50,7 @@ public final class DefaultsBackend {
     }
 
     @discardableResult
-    public func ensureApplicationSupport() -> URL? {
+    func ensureApplicationSupport() -> URL? {
         let fm = FileManager.default
         guard let target = Self.clipboardImagesDirectoryURL(fileManager: fm) else {
             log.error("Application Support URL unavailable")
@@ -69,7 +69,7 @@ public final class DefaultsBackend {
         }
     }
 
-    public func clearAll() {
+    func clearAll() {
         let allKeys = defaults.dictionaryRepresentation().keys
         for key in allKeys where key.hasPrefix("\(keyPrefix).") {
             defaults.removeObject(forKey: key)

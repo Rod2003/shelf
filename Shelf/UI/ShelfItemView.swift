@@ -1,17 +1,17 @@
 import SwiftUI
 import ShelfCore
-public struct ShelfItemView: View {
-    public let item: ShelfItem
-    public let isSelected: Bool
-    public let resolver: BookmarkResolver?
-    public let thumbnailService: ThumbnailService?
-    public let showsDisplayName: Bool
+struct ShelfItemView: View {
+    let item: ShelfItem
+    let isSelected: Bool
+    let resolver: BookmarkResolver?
+    let thumbnailService: ThumbnailService?
+    let showsDisplayName: Bool
 
     @State private var thumbnail: NSImage?
     @State private var isMissing: Bool = false
     @State private var isHovering: Bool = false
 
-    public init(
+    init(
         item: ShelfItem,
         isSelected: Bool = false,
         resolver: BookmarkResolver? = nil,
@@ -25,7 +25,7 @@ public struct ShelfItemView: View {
         self.showsDisplayName = showsDisplayName
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 4) {
             thumbnailContainer
             Text(item.displayName)

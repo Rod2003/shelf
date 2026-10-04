@@ -1,7 +1,7 @@
 import SwiftUI
 import ShelfCore
 
-public struct ShelfContentView: View {
+struct ShelfContentView: View {
     @ObservedObject var viewModel: ShelfViewModel
     let resolver: BookmarkResolver?
     let thumbnailService: ThumbnailService?
@@ -16,7 +16,7 @@ public struct ShelfContentView: View {
     @State private var isCollapseHovering: Bool = false
     @State private var keepsCollapseButtonMounted: Bool = false
 
-    public init(
+    init(
         viewModel: ShelfViewModel,
         resolver: BookmarkResolver? = nil,
         thumbnailService: ThumbnailService? = nil,
@@ -38,7 +38,7 @@ public struct ShelfContentView: View {
         self.onClose = onClose
     }
 
-    public var body: some View {
+    var body: some View {
         ZStack {
             panelInteractionSurface
                 .zIndex(0)

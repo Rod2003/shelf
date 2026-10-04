@@ -4,7 +4,7 @@ import ShelfCore
 import SwiftUI
 
 @MainActor
-public final class AppCoordinator {
+final class AppCoordinator {
     private let log = Logger(subsystem: "dev.rod.shelf", category: "core")
 
     private let defaultsBackend: DefaultsBackend
@@ -23,7 +23,7 @@ public final class AppCoordinator {
     private var collapsedSize: CGSize?
     private var aboutCloseObserver: NSObjectProtocol?
 
-    public init() {
+    init() {
         self.defaultsBackend = DefaultsBackend()
         self.bookmarkResolver = BookmarkResolver()
         self.thumbnailService = ThumbnailService()
@@ -35,7 +35,7 @@ public final class AppCoordinator {
         self.quickLook = QuickLookCoordinator(resolver: bookmarkResolver)
     }
 
-    public func bootstrap() {
+    func bootstrap() {
         defaultsBackend.ensureApplicationSupport()
         wireCallbacks()
         deduplicateStoredShelf()
@@ -44,7 +44,7 @@ public final class AppCoordinator {
         log.info("AppCoordinator bootstrapped")
     }
 
-    public func teardown() {
+    func teardown() {
         shakeDetector.stop()
         windowManager.closeShelf()
         log.info("AppCoordinator teardown")

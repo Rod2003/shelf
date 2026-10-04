@@ -2,30 +2,30 @@ import Foundation
 import OSLog
 import ShelfCore
 
-public final class BookmarkResolver: Sendable {
+final class BookmarkResolver: Sendable {
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "persist")
 
-    public init() {}
+    init() {}
 
-    public struct Resolution {
-        public let url: URL
-        public let isStale: Bool
-        public let refreshedData: Data
+    struct Resolution {
+        let url: URL
+        let isStale: Bool
+        let refreshedData: Data
 
-        public init(url: URL, isStale: Bool, refreshedData: Data) {
+        init(url: URL, isStale: Bool, refreshedData: Data) {
             self.url = url
             self.isStale = isStale
             self.refreshedData = refreshedData
         }
     }
 
-    public enum ResolutionError: Error {
+    enum ResolutionError: Error {
         case bookmarkResolutionFailed(underlying: Error)
         case fileNoLongerExists(originalPath: String)
     }
 
-    public func resolve(_ record: BookmarkRecord) throws -> Resolution {
+    func resolve(_ record: BookmarkRecord) throws -> Resolution {
         var stale = false
         let url: URL
         do {
@@ -66,7 +66,7 @@ public final class BookmarkResolver: Sendable {
         return Resolution(url: url, isStale: stale, refreshedData: refreshed)
     }
 
-    public func release(_ url: URL) {
+    func release(_ url: URL) {
         url.stopAccessingSecurityScopedResource()
     }
 }
