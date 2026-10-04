@@ -15,6 +15,15 @@ public enum DragItemFactory {
         .plainText,
         .text
     ]
+    public static let droppablePasteboardTypes: Set<NSPasteboard.PasteboardType> = [
+        .fileURL,
+        .URL,
+        .png,
+        .tiff,
+        .fileContents,
+        NSPasteboard.PasteboardType("public.image"),
+        .string
+    ]
     public static let internalShelfDragType = NSPasteboard.PasteboardType("dev.rod.shelf.internal-drag")
     public static let internalShelfDragTypeIdentifier = internalShelfDragType.rawValue
 

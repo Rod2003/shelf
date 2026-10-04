@@ -17,17 +17,6 @@ public final class ShakeDetector {
     public static let idlePollSec: TimeInterval = 0.20
     public static let activePollSec: TimeInterval = 1.0 / 60.0
 
-    // Pasteboard types that count as a real drag Shelf can accept.
-    private static let droppableTypes: Set<NSPasteboard.PasteboardType> = [
-        .fileURL,
-        .URL,
-        .png,
-        .tiff,
-        .fileContents,
-        NSPasteboard.PasteboardType("public.image"),
-        .string
-    ]
-
     public var onShakeDuringDrag: ((CGPoint) -> Void)?
 
     var isHighFreqSamplingActive: Bool {
@@ -35,7 +24,7 @@ public final class ShakeDetector {
     }
 
     public init(
-        config: ShakeHeuristic.Config = .defaultMedium,
+        config: ShakeHeuristic.Config = .standard,
         dragPasteboard: NSPasteboard = NSPasteboard(name: .drag),
         pressedMouseButtons: @escaping @autoclosure () -> Int = NSEvent.pressedMouseButtons
     ) {
@@ -88,7 +77,7 @@ public final class ShakeDetector {
     private func isRealFileDragInFlight() -> Bool {
         guard pressedMouseButtons() != 0 else { return false }
         let advertised = dragPasteboard.types ?? []
-        return !Set(advertised).isDisjoint(with: Self.droppableTypes)
+        return !Set(advertised).isDisjoint(with: DragItemFactory.droppablePasteboardTypes)
     }
 
     private func beginHighFreqSampling() {
@@ -125,8 +114,7 @@ public final class ShakeDetector {
         let now = Date().timeIntervalSinceReferenceDate
         let pos = NSEvent.mouseLocation
 
-        let event = heuristic.ingest(timestamp: now, position: pos)
-        if case .shake = event {
+        if heuristic.ingest(timestamp: now, position: pos) {
             log.info("Shake detected during drag")
             onShakeDuringDrag?(pos)
             endHighFreqSampling()
