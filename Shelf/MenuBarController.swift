@@ -41,12 +41,13 @@ final class MenuBarController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
 
+        // No key equivalent: the shortcut is user-rebindable and registered
+        // globally via KeyboardShortcuts (the menu item is just a click target).
         let newItem = NSMenuItem(
             title: "Show Shelf",
             action: #selector(handleShowShelf),
-            keyEquivalent: " "
+            keyEquivalent: ""
         )
-        newItem.keyEquivalentModifierMask = [.command, .shift]
         newItem.target = self
         menu.addItem(newItem)
 

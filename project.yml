@@ -37,6 +37,9 @@ settings:
 packages:
   ShelfCore:
     path: Modules/ShelfCore
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.3.0"
 targets:
   Shelf:
     type: application
@@ -81,6 +84,8 @@ targets:
     dependencies:
       - package: ShelfCore
         product: ShelfCore
+      - package: KeyboardShortcuts
+        product: KeyboardShortcuts
   ShelfTests:
     type: bundle.unit-test
     platform: macOS

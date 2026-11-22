@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
@@ -6,9 +7,13 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Shortcuts") {
+                KeyboardShortcuts.Recorder("Show shelf", name: .showShelf)
+                KeyboardShortcuts.Recorder("Save replay", name: .saveReplay)
+            }
+
             Section {
                 Toggle("Enable Replay", isOn: $replay.isEnabled)
-                LabeledContent("Save last 30 seconds", value: HotkeyManager.saveReplayShortcutLabel)
                 if let status = replay.status {
                     Text(status)
                         .font(.callout)
@@ -17,7 +22,7 @@ struct SettingsView: View {
             } header: {
                 Text("Replay")
             } footer: {
-                Text("Keeps the last 30 seconds of your main display in memory. Saved clips go to Movies › Shelf Replays and open in the shelf.")
+                Text("Keeps the last 30 seconds of your main display in memory. Press the Save replay shortcut to save a clip to Movies › Shelf Replays and open it in the shelf.")
                     .foregroundStyle(.secondary)
             }
         }
