@@ -2,19 +2,24 @@ import AppKit
 import Carbon.HIToolbox
 import OSLog
 
-/// Registers the global show-shelf hotkey (Cmd+Shift+Space); Carbon avoids TCC
-/// prompts. Esc and Space are handled locally by the panel while it is key.
+/// Registers the global show-shelf hotkey (Cmd+Shift+Space) and, while Replay is
+/// on, the save-replay hotkey (Ctrl+Option+R); Carbon avoids TCC prompts.
+/// Esc and Space are handled locally by the panel while it is key.
 @MainActor
 final class HotkeyManager {
     private static let signature: OSType = OSType(0x53484C46)
     private static let showShelfHotKeyID: UInt32 = 1
+    private static let saveReplayHotKeyID: UInt32 = 2
+    static let saveReplayShortcutLabel = "⌃⌥R"
 
     private let log = Logger(subsystem: "dev.rod.shelf", category: "hotkey")
 
     private var hotKeyRef: EventHotKeyRef?
+    private var saveReplayHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     var onShowShelf: (() -> Void)?
+    var onSaveReplay: (() -> Void)?
 
     init() {
         installCarbonEventHandler()
@@ -25,6 +30,9 @@ final class HotkeyManager {
         // Do not call @MainActor helpers from deinit; unregister Carbon refs directly.
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
+        }
+        if let saveReplayHotKeyRef {
+            UnregisterEventHotKey(saveReplayHotKeyRef)
         }
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
@@ -96,12 +104,38 @@ final class HotkeyManager {
         log.info("Registered show-shelf hotkey")
     }
 
-    private func dispatch(id: UInt32) {
-        guard id == Self.showShelfHotKeyID else {
-            log.error("Hotkey fired with unknown id=\(id, privacy: .public)")
+    /// Only claimed while Replay is on, so the combo isn't swallowed globally otherwise.
+    func setSaveReplayEnabled(_ enabled: Bool) {
+        if !enabled {
+            if let saveReplayHotKeyRef { UnregisterEventHotKey(saveReplayHotKeyRef) }
+            saveReplayHotKeyRef = nil
             return
         }
-        log.info("showShelf hotkey fired")
-        onShowShelf?()
+        guard saveReplayHotKeyRef == nil else { return }
+        let id = EventHotKeyID(signature: HotkeyManager.signature, id: Self.saveReplayHotKeyID)
+        let status = RegisterEventHotKey(
+            UInt32(kVK_ANSI_R),
+            UInt32(controlKey | optionKey),
+            id,
+            GetApplicationEventTarget(),
+            0,
+            &saveReplayHotKeyRef
+        )
+        if status != noErr {
+            log.error("RegisterEventHotKey(saveReplay) failed status=\(status, privacy: .public)")
+        }
+    }
+
+    private func dispatch(id: UInt32) {
+        switch id {
+        case Self.showShelfHotKeyID:
+            log.info("showShelf hotkey fired")
+            onShowShelf?()
+        case Self.saveReplayHotKeyID:
+            log.info("saveReplay hotkey fired")
+            onSaveReplay?()
+        default:
+            log.error("Hotkey fired with unknown id=\(id, privacy: .public)")
+        }
     }
 }

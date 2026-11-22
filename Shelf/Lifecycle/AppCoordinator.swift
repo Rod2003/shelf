@@ -18,6 +18,8 @@ final class AppCoordinator {
     private let windowManager: ShelfWindowManager
     private let thumbnailService: ThumbnailService
     private let quickLook: QuickLookCoordinator
+    private let replay = ReplayController()
+    private var settingsWindow: NSWindow?
 
     private var viewModel: ShelfViewModel?
     private var collapsedSize: CGSize?
@@ -41,11 +43,13 @@ final class AppCoordinator {
         deduplicateStoredShelf()
         sweepOrphanedManagedFiles()
         shakeDetector.start()
+        replay.bootstrap()
         log.info("AppCoordinator bootstrapped")
     }
 
     func teardown() {
         shakeDetector.stop()
+        replay.teardown()
         windowManager.closeShelf()
         log.info("AppCoordinator teardown")
     }
@@ -54,6 +58,13 @@ final class AppCoordinator {
         hotkeyManager.onShowShelf = { [weak self] in
             self?.showShelfAtCursor()
         }
+        hotkeyManager.onSaveReplay = { [weak self] in
+            self?.saveReplayToShelf()
+        }
+        replay.onEnabledChanged = { [weak self] enabled in
+            self?.hotkeyManager.setSaveReplayEnabled(enabled)
+        }
+        hotkeyManager.setSaveReplayEnabled(replay.isEnabled)
         quickLook.onDidClose = { [weak self] in
             self?.log.info("Quick Look did close; restoring shelf focus")
             self?.windowManager.focusShelf()
@@ -74,6 +85,9 @@ final class AppCoordinator {
         }
         menuBar.onAbout = { [weak self] in
             self?.showAboutPanel()
+        }
+        menuBar.onSettings = { [weak self] in
+            self?.showSettings()
         }
         menuBar.onQuit = {
             NSApp.terminate(nil)
@@ -207,7 +221,7 @@ final class AppCoordinator {
         aboutWindow.collectionBehavior.insert(.moveToActiveSpace)
         aboutWindow.makeKeyAndOrderFront(nil)
         aboutWindow.orderFrontRegardless()
-        observeAboutWindowClose(aboutWindow)
+        observeAccessoryWindowClose(aboutWindow)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             NSApp.activate(ignoringOtherApps: true)
@@ -216,7 +230,7 @@ final class AppCoordinator {
         }
     }
 
-    private func observeAboutWindowClose(_ window: NSWindow) {
+    private func observeAccessoryWindowClose(_ window: NSWindow) {
         if let aboutCloseObserver {
             NotificationCenter.default.removeObserver(aboutCloseObserver)
             self.aboutCloseObserver = nil
@@ -227,12 +241,12 @@ final class AppCoordinator {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.restoreAccessoryPolicyAfterAbout()
+                self?.restoreAccessoryPolicy()
             }
         }
     }
 
-    private func restoreAccessoryPolicyAfterAbout() {
+    private func restoreAccessoryPolicy() {
         if let aboutCloseObserver {
             NotificationCenter.default.removeObserver(aboutCloseObserver)
             self.aboutCloseObserver = nil
@@ -599,5 +613,31 @@ private extension AppCoordinator {
 
     func normalizedFilePath(_ url: URL) -> String {
         url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+}
+
+// MARK: - Replay & Settings
+
+private extension AppCoordinator {
+    func saveReplayToShelf() {
+        Task {
+            guard let url = await replay.saveReplay(),
+                  let item = DropItemBuilder.makeFileBookmarkItem(from: url)
+            else { return }
+            if shelfStore.current() == nil {
+                shelfStore.set(ShelfGroup(name: ""))
+            }
+            appendItems([item])
+            showShelfAtCursor()
+        }
+    }
+
+    func showSettings() {
+        let window = settingsWindow ?? SettingsWindow.make(replay: replay)
+        settingsWindow = window
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        observeAccessoryWindowClose(window)
     }
 }
