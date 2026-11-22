@@ -103,15 +103,46 @@ final class ShelfWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
     }
 
+    private static let appearDuration: TimeInterval = 0.16
+    private static let dismissDuration: TimeInterval = 0.12
+    private var isDismissing = false
+
     func show() {
+        isDismissing = false
+        // Already up (a focus re-show): just key it, don't replay the animation.
+        if panel.isVisible, panel.alphaValue > 0.99 {
+            panel.makeKey()
+            return
+        }
+        panel.alphaValue = 0
         panel.orderFrontRegardless()
         panel.makeKey()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.appearDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        }
         log.info("Shelf panel shown id=\(self.shelfID.uuidString, privacy: .public)")
     }
 
     func close() {
-        panel.close()
+        // Not visible, or already fading out: close immediately.
+        guard panel.isVisible, !isDismissing else {
+            panel.close()
+            return
+        }
+        isDismissing = true
         log.info("Shelf panel close requested id=\(self.shelfID.uuidString, privacy: .public)")
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = Self.dismissDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            guard let self, self.isDismissing else { return } // a reopen cancelled the dismiss
+            self.panel.close()
+            self.panel.alphaValue = 1 // reset for the next open
+            self.isDismissing = false
+        })
     }
 
     private static func applyRoundedClearMask(to layer: CALayer?) {
