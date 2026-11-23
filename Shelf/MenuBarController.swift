@@ -13,6 +13,8 @@ final class MenuBarController: NSObject {
 
     var onAbout: (() -> Void)?
 
+    var onSettings: (() -> Void)?
+
     var onQuit: (() -> Void)?
 
     var activeShelf: ShelfGroup? {
@@ -39,12 +41,13 @@ final class MenuBarController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
 
+        // No key equivalent: the shortcut is user-rebindable and registered
+        // globally via KeyboardShortcuts (the menu item is just a click target).
         let newItem = NSMenuItem(
             title: "Show Shelf",
             action: #selector(handleShowShelf),
-            keyEquivalent: " "
+            keyEquivalent: ""
         )
-        newItem.keyEquivalentModifierMask = [.command, .shift]
         newItem.target = self
         menu.addItem(newItem)
 
@@ -69,6 +72,15 @@ final class MenuBarController: NSObject {
         )
         aboutItem.target = self
         menu.addItem(aboutItem)
+
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(handleSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.keyEquivalentModifierMask = .command
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
@@ -124,6 +136,13 @@ final class MenuBarController: NSObject {
         statusItem.menu?.cancelTracking()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.onAbout?()
+        }
+    }
+
+    @objc private func handleSettings() {
+        statusItem.menu?.cancelTracking()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.onSettings?()
         }
     }
 
